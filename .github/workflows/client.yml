@@ -119,7 +119,15 @@ jobs:
               net.minecraft.client.gui.components.AbstractSliderButton \
               net.minecraft.client.gui.screens.inventory.tooltip.TooltipRenderUtil \
               net.minecraft.client.gui.components.Checkbox \
-              net.minecraft.client.gui.components.Tooltip ; do
+              net.minecraft.client.gui.components.Tooltip \
+              net.minecraft.client.gui.Font \
+              'net.minecraft.client.gui.Font$Provider' \
+              net.minecraft.client.StringSplitter \
+              net.minecraft.client.gui.screens.inventory.tooltip.ClientTextTooltip \
+              'net.minecraft.client.gui.components.AbstractSelectionList$Entry' \
+              net.minecraft.client.gui.components.tabs.TabButton \
+              net.minecraft.client.gui.font.FontManager \
+              net.minecraft.client.gui.font.FontSet ; do
               echo "=== $c" >> notes/$v.txt
               javap -p -cp "$JAR" "$c" >> notes/$v.txt 2>&1 || true
             done
@@ -145,6 +153,9 @@ jobs:
               net.minecraft.client.gui.components.CycleButton \
               net.minecraft.client.gui.components.OptionsList \
               net.minecraft.client.gui.screens.TitleScreen \
+              net.minecraft.client.gui.Font \
+              net.minecraft.client.gui.font.FontManager \
+              net.minecraft.client.gui.screens.inventory.tooltip.ClientTextTooltip \
               net.minecraft.client.gui.GuiGraphics ; do
               echo "=== $c" >> notes/$v-code.txt
               javap -p -c -cp "$JAR" "$c" 2>&1 | grep -E "^  [a-z].*\(|invoke|getstatic|putstatic|putfield|getfield|ldc|sipush|bipush|iconst" | grep -vE "Narrat|narrat" >> notes/$v-code.txt || true

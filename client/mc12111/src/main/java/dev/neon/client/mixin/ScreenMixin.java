@@ -31,6 +31,16 @@ public abstract class ScreenMixin {
         this.title = Ui.style(this.title);
     }
 
+    @Inject(method = "renderWithTooltipAndSubtitles", at = @At("HEAD"))
+    private void neon$enter(GuiGraphics g, int mx, int my, float partial, CallbackInfo ci) {
+        Ui.enterScreen((Screen) (Object) this);
+    }
+
+    @Inject(method = "renderWithTooltipAndSubtitles", at = @At("RETURN"))
+    private void neon$exit(GuiGraphics g, int mx, int my, float partial, CallbackInfo ci) {
+        Ui.exitScreen((Screen) (Object) this);
+    }
+
     @Inject(method = "renderPanorama", at = @At("HEAD"), cancellable = true)
     private void neon$background(GuiGraphics g, float partial, CallbackInfo ci) {
         Ui.background(g, width, height, width / 2, height / 2);

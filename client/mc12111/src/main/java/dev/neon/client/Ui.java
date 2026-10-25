@@ -1,12 +1,20 @@
 package dev.neon.client;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractSignEditScreen;
+import net.minecraft.client.gui.screens.inventory.BookEditScreen;
+import net.minecraft.client.gui.screens.inventory.BookViewScreen;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.FormattedCharSequence;
 
 /** Общий стиль Neon (1.21.11): цвета, шрифт Inter, фон, иконки */
 public final class Ui {
@@ -21,6 +29,8 @@ public final class Ui {
 
     public static final FontDescription FONT = new FontDescription.Resource(id("ui"));
     public static final FontDescription FONT_BOLD = new FontDescription.Resource(id("ui_bold"));
+    public static final FontDescription FONT_SMALL = new FontDescription.Resource(id("ui_small"));
+    public static final Style STYLE = Style.EMPTY.withFont(FONT).withoutShadow();
 
     public static final Identifier BACKGROUND = id("textures/gui/background.png");
     public static final Identifier LOGO = id("textures/gui/logo.png");
@@ -28,6 +38,7 @@ public final class Ui {
     public static final Identifier BUTTON_HOVER = Identifier.withDefaultNamespace("widget/button_highlighted");
     public static final Identifier BUTTON_DISABLED = Identifier.withDefaultNamespace("widget/button_disabled");
     public static final Identifier PANEL = id("panel");
+    public static final Identifier SELECTION = id("selection");
 
     private static final int BG_W = 1600, BG_H = 900;
 
@@ -44,6 +55,10 @@ public final class Ui {
         return Component.literal(s).withStyle(st -> st.withFont(FONT).withoutShadow());
     }
 
+    public static MutableComponent small(String s) {
+        return Component.literal(s).withStyle(st -> st.withFont(FONT_SMALL).withoutShadow());
+    }
+
     public static MutableComponent bold(String s) {
         return Component.literal(s).withStyle(st -> st.withFont(FONT_BOLD).withoutShadow());
     }
@@ -53,6 +68,57 @@ public final class Ui {
         if (c == null) return null;
         if (!FontDescription.DEFAULT.equals(c.getStyle().getFont())) return c;
         return c.copy().withStyle(st -> st.withFont(FONT).withoutShadow());
+    }
+
+    // ---- весь текст экранов (не HUD) — шрифтом Inter ----
+
+    private static int screenDepth, suspended;
+
+    /** Экраны, где текст должен совпадать с миром/HUD: чат, таблички, книги — их не трогаем */
+    public static boolean styled(Screen s) {
+        return s != null && !(s instanceof ChatScreen) && !(s instanceof AbstractSignEditScreen)
+                && !(s instanceof BookEditScreen) && !(s instanceof BookViewScreen);
+    }
+
+    public static boolean styledScreen() {
+        return styled(Minecraft.getInstance().screen);
+    }
+
+    public static void enterScreen(Screen s) {
+        if (styled(s)) screenDepth++;
+    }
+
+    public static void exitScreen(Screen s) {
+        if (styled(s) && screenDepth > 0) screenDepth--;
+    }
+
+    public static void suspend(boolean on) {
+        suspended += on ? 1 : (suspended > 0 ? -1 : 0);
+    }
+
+    public static boolean inScreen() {
+        return screenDepth > 0 && suspended == 0;
+    }
+
+    public static boolean isDefault(Style st) {
+        return FontDescription.DEFAULT.equals(st.getFont());
+    }
+
+    /** Текст со стандартным шрифтом переводим на Inter, остальные шрифты не трогаем */
+    public static FormattedCharSequence wrap(FormattedCharSequence seq) {
+        return sink -> seq.accept((i, st, cp) -> sink.accept(i, isDefault(st) ? st.withFont(FONT).withoutShadow() : st, cp));
+    }
+
+    public static int width(Font f, String s) {
+        return f.width(FormattedCharSequence.forward(s, STYLE));
+    }
+
+    public static String head(Font f, String s, int w) {
+        return f.getSplitter().plainHeadByWidth(s, w, STYLE);
+    }
+
+    public static String tail(Font f, String s, int w) {
+        return f.getSplitter().plainTailByWidth(s, w, STYLE);
     }
 
     public static boolean russian() {

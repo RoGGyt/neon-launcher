@@ -5,11 +5,16 @@
   "compatibilityLevel": "JAVA_17",
   "client": [
     "MinecraftMixin",
+    "GameRendererMixin",
     "ScreenMixin",
+    "FontMixin",
+    "GuiGraphicsMixin",
     "AbstractWidgetMixin",
     "AbstractButtonMixin",
+    "SliderMixin",
     "EditBoxMixin",
     "AbstractSelectionListMixin",
+    "TooltipMixin",
     "LoadingOverlayMixin"
   ],
   "injectors": {

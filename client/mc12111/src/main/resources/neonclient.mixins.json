@@ -7,6 +7,10 @@
     "MinecraftMixin",
     "ScreenMixin",
     "AbstractWidgetMixin",
+    "WithInactiveMessageMixin",
+    "GuiGraphicsMixin",
+    "EditBoxMixin",
+    "AbstractSelectionListMixin",
     "LoadingOverlayMixin"
   ],
   "injectors": {

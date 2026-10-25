@@ -2,6 +2,11 @@ package dev.neon.client;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractSignEditScreen;
+import net.minecraft.client.gui.screens.inventory.BookEditScreen;
+import net.minecraft.client.gui.screens.inventory.BookViewScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
@@ -48,6 +53,41 @@ public final class Ui {
         if (c == null) return false;
         ResourceLocation f = c.getStyle().getFont();
         return FONT.equals(f) || FONT_BOLD.equals(f);
+    }
+
+    // ---- весь текст экранов (не HUD и не мир) — шрифтом Inter ----
+    // Пока открыт экран, шрифт по умолчанию подменяется на Inter: при отрисовке экрана и при обработке
+    // ввода/вёрстке (вне кадра). HUD, мир, тосты и цифры предметов остаются ванильными.
+
+    private static int screenDepth, suspended;
+    private static boolean inFrame;
+
+    public static boolean styled(Screen s) {
+        return s != null && !(s instanceof ChatScreen) && !(s instanceof AbstractSignEditScreen)
+                && !(s instanceof BookEditScreen) && !(s instanceof BookViewScreen);
+    }
+
+    public static void enterScreen(Screen s) {
+        if (styled(s)) screenDepth++;
+    }
+
+    public static void exitScreen(Screen s) {
+        if (styled(s) && screenDepth > 0) screenDepth--;
+    }
+
+    public static void frame(boolean on) {
+        inFrame = on;
+        if (!on) screenDepth = 0;
+    }
+
+    public static void suspend(boolean on) {
+        suspended += on ? 1 : (suspended > 0 ? -1 : 0);
+    }
+
+    public static boolean inScreen() {
+        if (suspended > 0) return false;
+        if (screenDepth > 0) return true;
+        return !inFrame && styled(Minecraft.getInstance().screen);
     }
 
     public static boolean russian() {
