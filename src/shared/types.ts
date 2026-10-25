@@ -83,7 +83,18 @@ export interface InstalledMod {
   sizeBytes: number;
 }
 
+export interface UpdateState {
+  /** idle — нет обновлений; downloading — качается; ready — скачано, можно ставить;
+   *  manual — портативная версия, обновить можно только скачав новый exe */
+  status: 'idle' | 'checking' | 'downloading' | 'ready' | 'manual' | 'error';
+  version?: string;
+  percent?: number;
+  error?: string;
+}
+
 export interface SystemInfo {
+  appVersion: string;
+  portable: boolean;
   totalMemMb: number;
   platform: string;
   rootDir: string;
@@ -124,9 +135,15 @@ export interface LauncherApi {
   deleteMod(profileId: string, fileName: string): Promise<void>;
   openModsFolder(profileId: string): Promise<void>;
 
+  getUpdateState(): Promise<UpdateState>;
+  checkForUpdates(): Promise<void>;
+  installUpdate(): Promise<void>;
+  openReleases(): Promise<void>;
+
   windowControl(action: 'minimize' | 'maximize' | 'close'): void;
 
   onProgress(cb: (e: ProgressEvent | null) => void): () => void;
   onLog(cb: (e: LogEvent) => void): () => void;
   onLaunchState(cb: (s: LaunchState) => void): () => void;
+  onUpdate(cb: (s: UpdateState) => void): () => void;
 }

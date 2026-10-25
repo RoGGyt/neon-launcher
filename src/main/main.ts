@@ -9,6 +9,7 @@ import { listFabric, listForge } from './loaders';
 import { offlineAccount, elyLogin, elyLogout } from './auth';
 import { launchProfile, killGame, isRunning } from './launch';
 import * as mods from './mods';
+import { initUpdater, getUpdateState, checkForUpdates, installUpdate, isPortable, RELEASES_URL } from './updater';
 import type { Loader, LogEvent, ProgressEvent } from '../shared/types';
 
 let win: BrowserWindow | null = null;
@@ -73,6 +74,8 @@ function handle<A extends unknown[], R>(channel: string, fn: (...args: A) => Pro
 
 function registerIpc() {
   handle('system:info', () => ({
+    appVersion: app.getVersion(),
+    portable: isPortable,
     totalMemMb: Math.floor(os.totalmem() / 1024 / 1024),
     platform: process.platform,
     rootDir: paths.root,
@@ -161,6 +164,14 @@ function registerIpc() {
     await shell.openPath(dir);
   });
 
+  handle('update:state', () => getUpdateState());
+  handle('update:check', () => checkForUpdates());
+  handle('update:install', () => {
+    if (isRunning().running) throw new Error('Сначала закрой игру — лаунчер перезапустится для обновления');
+    installUpdate();
+  });
+  handle('update:releases', () => shell.openExternal(RELEASES_URL));
+
   ipcMain.on('window', (_e, action: string) => {
     if (!win) return;
     if (action === 'minimize') win.minimize();
@@ -185,6 +196,7 @@ if (!app.requestSingleInstanceLock()) {
     await fsp.mkdir(paths.root, { recursive: true });
     registerIpc();
     createWindow();
+    initUpdater(st => send('update', st), line => hooks.log(line));
   });
 
   app.on('window-all-closed', () => {

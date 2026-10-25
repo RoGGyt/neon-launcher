@@ -1,5 +1,5 @@
 import { api, h, $, clear, icon, toast, guard, modal, confirmDialog, fmtNum, fmtSize, fmtAgo, loaderLabel } from './dom.js';
-import type { Account, Loader, McVersion, Profile, Settings, SystemInfo, LaunchState, LogEvent, ProgressEvent, InstalledMod, ModrinthHit } from '../shared/types';
+import type { Account, Loader, McVersion, Profile, Settings, SystemInfo, LaunchState, LogEvent, ProgressEvent, InstalledMod, ModrinthHit, UpdateState } from '../shared/types';
 
 type View = 'home' | 'profiles' | 'mods' | 'settings' | 'console';
 
@@ -16,6 +16,7 @@ const state = {
   modsProfileId: null as string | null,
   modsTab: 'installed' as 'installed' | 'browse',
   modsQuery: '',
+  update: { status: 'idle' } as UpdateState,
 };
 
 const main = () => $('#view');
@@ -58,6 +59,7 @@ function renderShell() {
         v === 'console' && state.launch.running ? h('span.live-dot', { title: 'Игра запущена' }) : null,
       ))),
     h('div.sidebar-foot', {},
+      updateBanner(),
       h('button.account-chip', { onclick: () => go('settings'), title: 'Аккаунт' },
         avatar(state.settings.account, 34),
         h('div.account-text', {},
@@ -67,6 +69,42 @@ function renderShell() {
       ),
     ),
   );
+}
+
+function updateBanner(): HTMLElement | null {
+  const u = state.update;
+  if (u.status === 'downloading') {
+    return h('div.update-banner', {},
+      h('div.update-title', {}, `Обновление ${u.version ?? ''}`),
+      h('div.update-sub', {}, `Загружается… ${u.percent ?? 0}%`),
+      h('div.update-track', {}, h('div.update-fill', { style: `width:${u.percent ?? 0}%` })),
+    );
+  }
+  if (u.status === 'ready') {
+    return h('div.update-banner.ready', {},
+      h('div.update-title', {}, `Версия ${u.version} готова`),
+      h('button.btn.primary.sm.full', { onclick: () => guard(() => api.installUpdate()) }, icon('refresh', 14), 'Перезапустить'),
+    );
+  }
+  if (u.status === 'manual') {
+    return h('div.update-banner.ready', {},
+      h('div.update-title', {}, `Вышла версия ${u.version}`),
+      h('button.btn.primary.sm.full', { onclick: () => guard(() => api.openReleases()) }, icon('download', 14), 'Скачать'),
+    );
+  }
+  return null;
+}
+
+function updateStatusText(): string {
+  const u = state.update;
+  switch (u.status) {
+    case 'checking': return 'Проверяю…';
+    case 'downloading': return `Загружаю ${u.version} (${u.percent ?? 0}%)`;
+    case 'ready': return `Версия ${u.version} скачана — перезапусти лаунчер`;
+    case 'manual': return `Вышла версия ${u.version}`;
+    case 'error': return 'Не удалось проверить обновления';
+    default: return 'У тебя последняя версия';
+  }
 }
 
 function go(v: View) {
@@ -671,6 +709,23 @@ function viewSettings(): HTMLElement {
         h('div.setting-row', {}, h('div', {}, h('div.setting-label', {}, 'Потоков загрузки'), h('div.muted.small', {}, 'Больше — быстрее на хорошем интернете')), parallel),
       ),
       h('section.panel', {},
+        h('h3', {}, 'О лаунчере'),
+        h('div.setting-row', {},
+          h('div', {},
+            h('div.setting-label', {}, `Neon Launcher ${state.sys.appVersion}${state.sys.portable ? ' · портативный' : ''}`),
+            h('div.muted.small', {}, updateStatusText())),
+          state.update.status === 'ready'
+            ? h('button.btn.primary.sm', { onclick: () => guard(() => api.installUpdate()) }, 'Обновить')
+            : state.update.status === 'manual'
+              ? h('button.btn.primary.sm', { onclick: () => guard(() => api.openReleases()) }, 'Скачать')
+              : h('button.btn.ghost.sm', {
+                  disabled: state.update.status === 'checking' || state.update.status === 'downloading',
+                  onclick: () => guard(() => api.checkForUpdates()),
+                }, icon('refresh', 14), 'Проверить'),
+        ),
+        state.sys.portable ? h('p.muted.small', {}, 'Портативная версия не обновляется сама — установи лаунчер через Setup, чтобы обновления ставились автоматически.') : null,
+      ),
+      h('section.panel', {},
         h('h3', {}, 'Файлы'),
         h('p.muted.small.mono.break', {}, state.sys.rootDir),
         h('button.btn.ghost', { onclick: () => guard(() => api.openRootFolder()) }, icon('folder'), 'Открыть папку лаунчера'),
@@ -794,6 +849,13 @@ async function boot() {
     renderShell();
     if (state.view === 'home' || state.view === 'profiles' || state.view === 'console') render();
   });
+
+  api.onUpdate(u => {
+    state.update = u;
+    renderShell();
+    if (state.view === 'settings') render();
+  });
+  state.update = await api.getUpdateState();
 
   renderShell();
   render();

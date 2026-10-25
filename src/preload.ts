@@ -43,11 +43,17 @@ const api: LauncherApi = {
   deleteMod: (profileId, file) => call('mods:delete', profileId, file),
   openModsFolder: profileId => call('mods:open', profileId),
 
+  getUpdateState: () => call('update:state'),
+  checkForUpdates: () => call('update:check'),
+  installUpdate: () => call('update:install'),
+  openReleases: () => call('update:releases'),
+
   windowControl: action => ipcRenderer.send('window', action),
 
   onProgress: cb => subscribe('progress', cb),
   onLog: cb => subscribe('log', cb),
   onLaunchState: cb => subscribe('launch-state', cb),
+  onUpdate: cb => subscribe('update', cb),
 };
 
 contextBridge.exposeInMainWorld('launcher', api);

@@ -11,6 +11,9 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 
@@ -18,24 +21,29 @@ jobs:
         with:
           node-version: 22
 
+      # каждая сборка получает новую версию 1.0.<номер сборки> — по ней работает автообновление
+      - name: Версия
+        run: |
+          npm version "1.0.${{ github.run_number }}" --no-git-tag-version --allow-same-version
+          echo "VERSION=1.0.${{ github.run_number }}" >> "$GITHUB_ENV"
+
       - name: Установка зависимостей
         run: npm install
 
-      - name: Сборка exe
-        run: npm run build && npx electron-builder --win --publish never
+      - name: Сборка и публикация
+        run: npm run build && npx electron-builder --win --publish always
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
-      - name: Публикация в Releases
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: build-${{ github.run_number }}
-          name: Neon Launcher — сборка ${{ github.run_number }}
-          make_latest: true
-          body: |
-            **NeonLauncher-Setup-*.exe** — установщик (ярлык на рабочем столе и в Пуске).
-            **NeonLauncher-portable-*.exe** — запускается сразу, без установки.
+      - name: Описание релиза
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          gh release edit "v$VERSION" --latest --title "Neon Launcher $VERSION" --notes "**NeonLauncher-Setup-$VERSION.exe** — установщик, дальше лаунчер обновляется сам.
+          **NeonLauncher-portable-$VERSION.exe** — без установки (обновлять вручную).
 
-            Если Windows покажет «Windows защитила ваш компьютер»: «Подробнее» → «Выполнить в любом случае».
-          files: |
-            release/*.exe
+          Если Windows покажет «Windows защитила ваш компьютер»: «Подробнее» → «Выполнить в любом случае».
+
+          Изменения: $COMMIT_MSG"
