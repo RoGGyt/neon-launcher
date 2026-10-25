@@ -195,7 +195,7 @@
 
   <footer>
     <div class="wrap">
-      <span>Neon Launcher, сделал RoGGyt</span>
+      <span>Neon Launcher</span>
       <span>Не связан с Mojang и Microsoft. Minecraft — товарный знак Mojang AB.</span>
       <a href="https://github.com/RoGGyt/neon-launcher/releases">Все версии</a>
     </div>
@@ -233,7 +233,7 @@
       const verEl = sim.querySelector('.js-ver');
       const CLOUD = { x: 50, y: 22 };
       const people = [
-        { name: 'RoGGyt', color: 'linear-gradient(135deg,#00c2ff,#5b6cff)', x: 17, y: 54 },
+        { name: 'Sanya', color: 'linear-gradient(135deg,#00c2ff,#5b6cff)', x: 17, y: 54 },
         { name: 'Vasya', color: 'linear-gradient(135deg,#ff5ea8,#8a5cff)', x: 50, y: 61 },
         { name: 'Vika', color: 'linear-gradient(135deg,#9dff00,#1fb36b)', x: 83, y: 54 },
       ].map(p => ({ ...p, online: false, host: false, role: '' }));
@@ -290,7 +290,7 @@
         if (act === 'start') {
           people.forEach(p => { p.online = true; p.waiting = true; p.role = 'ждёт…'; });
           await becomeHost(people[0]);
-          log('Все в игре: RoGGyt хост, Vasya и Vika подключились к нему сами.');
+          log('Все в игре: Sanya хост, Vasya и Vika подключились к нему сами.');
         } else if (act === 'leave' || act === 'crash') {
           const h = host();
           const others = people.filter(p => p.online && p !== h);
