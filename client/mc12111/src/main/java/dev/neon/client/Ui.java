@@ -32,6 +32,27 @@ public final class Ui {
     public static final FontDescription FONT_SMALL = new FontDescription.Resource(id("ui_small"));
     public static final Style STYLE = Style.EMPTY.withFont(FONT).withoutShadow();
 
+    private static final int MAX_SCALE = 8;
+    private static final FontDescription[][] SCALED = new FontDescription[3][MAX_SCALE + 1];
+    static {
+        String[] base = {"ui", "ui_bold", "ui_small"};
+        for (int b = 0; b < 3; b++)
+            for (int i = 1; i <= MAX_SCALE; i++) SCALED[b][i] = new FontDescription.Resource(id(base[b] + "_x" + i));
+    }
+
+    /**
+     * Шрифт с растром ровно под текущий масштаб интерфейса: буква рисуется пиксель в пиксель,
+     * без пережатия текстуры — поэтому края ровные на любом масштабе.
+     */
+    public static FontDescription scaled(FontDescription f) {
+        int b = FONT.equals(f) ? 0 : FONT_BOLD.equals(f) ? 1 : FONT_SMALL.equals(f) ? 2 : -1;
+        if (b < 0) return f;
+        Minecraft mc = Minecraft.getInstance();
+        int gs = mc != null && mc.getWindow() != null ? mc.getWindow().getGuiScale() : 4;
+        int scale = Math.max(1, Math.min(MAX_SCALE, gs));
+        return SCALED[b][scale];
+    }
+
     public static final Identifier BACKGROUND = id("textures/gui/background.png");
     public static final Identifier LOGO = id("textures/gui/logo.png");
     public static final Identifier BUTTON = Identifier.withDefaultNamespace("widget/button");

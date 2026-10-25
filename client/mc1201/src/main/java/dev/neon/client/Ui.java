@@ -24,6 +24,25 @@ public final class Ui {
 
     public static final ResourceLocation FONT = id("ui");
     public static final ResourceLocation FONT_BOLD = id("ui_bold");
+
+    private static final int MAX_SCALE = 8;
+    private static final ResourceLocation[][] SCALED = new ResourceLocation[2][MAX_SCALE + 1];
+    static {
+        for (int i = 1; i <= MAX_SCALE; i++) {
+            SCALED[0][i] = id("ui_x" + i);
+            SCALED[1][i] = id("ui_bold_x" + i);
+        }
+    }
+
+    /** Шрифт с растром ровно под текущий масштаб интерфейса — буквы пиксель в пиксель, края ровные */
+    public static ResourceLocation scaled(ResourceLocation f) {
+        int b = FONT.equals(f) ? 0 : FONT_BOLD.equals(f) ? 1 : -1;
+        if (b < 0) return f;
+        Minecraft mc = Minecraft.getInstance();
+        double gs = mc != null && mc.getWindow() != null ? mc.getWindow().getGuiScale() : 4;
+        int scale = (int) Math.max(1, Math.min(MAX_SCALE, Math.round(gs)));
+        return SCALED[b][scale];
+    }
     public static final ResourceLocation BACKGROUND = id("textures/gui/background.png");
     public static final ResourceLocation LOGO = id("textures/gui/logo.png");
     /** кнопки в той же раскладке, что widgets.png: v=46 выключена, 66 обычная, 86 под мышью; панель 32x32 на v=112 */

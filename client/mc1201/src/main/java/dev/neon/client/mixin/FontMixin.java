@@ -13,6 +13,6 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 public abstract class FontMixin {
     @ModifyVariable(method = "getFontSet", at = @At("HEAD"), argsOnly = true)
     private ResourceLocation neon$font(ResourceLocation loc) {
-        return Ui.inScreen() && Style.DEFAULT_FONT.equals(loc) ? Ui.FONT : loc;
+        return Ui.scaled(Ui.inScreen() && Style.DEFAULT_FONT.equals(loc) ? Ui.FONT : loc);
     }
 }
