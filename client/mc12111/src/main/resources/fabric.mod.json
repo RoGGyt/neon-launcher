@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "neonclient",
+  "version": "1.0.0",
+  "name": "Neon Client",
+  "description": "Главное меню Neon Launcher",
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": { "client": ["dev.neon.client.NeonClient"] },
+  "depends": { "fabricloader": ">=0.14.21", "minecraft": "${mc}" }
+}

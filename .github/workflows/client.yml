@@ -1,0 +1,94 @@
+name: Сборка Neon Client
+
+on:
+  push:
+    branches: [main]
+    paths: ['client/**', '.github/workflows/client.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.14.3
+
+      - name: Сборка
+        working-directory: client
+        run: |
+          set -o pipefail
+          gradle build --no-daemon --stacktrace 2>&1 | tee build.log
+
+      - name: Сигнатуры классов Minecraft (для разработки)
+        if: always()
+        run: |
+          mkdir -p notes
+          for v in 1.20.1 1.21.11; do
+            JAR=$(find client/.gradle ~/.gradle -name "*.jar" -path "*minecraft*" 2>/dev/null | grep -E "minecraft-(merged|client|clientOnly)[^/]*$" | grep "$v" | grep -iv sources | head -1)
+            echo "jar for $v: $JAR" >> notes/jars.txt
+            [ -z "$JAR" ] && continue
+            : > notes/$v.txt
+            for c in \
+              net.minecraft.client.Minecraft \
+              net.minecraft.client.gui.screens.Screen \
+              net.minecraft.client.gui.screens.TitleScreen \
+              net.minecraft.client.gui.GuiGraphics \
+              net.minecraft.client.gui.components.Button \
+              'net.minecraft.client.gui.components.Button$Builder' \
+              net.minecraft.client.gui.components.AbstractWidget \
+              net.minecraft.client.gui.components.PlayerSkinWidget \
+              net.minecraft.client.gui.components.PlayerFaceRenderer \
+              net.minecraft.client.resources.SkinManager \
+              net.minecraft.client.resources.PlayerSkin \
+              net.minecraft.world.entity.player.PlayerSkin \
+              net.minecraft.client.resources.DefaultPlayerSkin \
+              net.minecraft.client.gui.screens.inventory.InventoryScreen \
+              net.minecraft.client.gui.screens.worldselection.SelectWorldScreen \
+              net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen \
+              net.minecraft.client.gui.screens.OptionsScreen \
+              net.minecraft.client.gui.screens.options.OptionsScreen \
+              net.minecraft.client.gui.Font \
+              net.minecraft.client.User \
+              net.minecraft.client.model.PlayerModel \
+              net.minecraft.client.model.geom.ModelLayers \
+              net.minecraft.client.model.geom.EntityModelSet \
+              net.minecraft.client.gui.components.events.GuiEventListener \
+              net.minecraft.network.chat.Component \
+              com.mojang.blaze3d.vertex.PoseStack \
+              org.joml.Matrix3x2fStack \
+              net.minecraft.client.gui.screens.ConfirmScreen ; do
+              echo "=== $c" >> notes/$v.txt
+              javap -p -cp "$JAR" "$c" >> notes/$v.txt 2>&1 || true
+            done
+          done
+          ls -la notes
+
+      - name: Выложить заметки в ветку ci-notes
+        if: always()
+        run: |
+          cp client/build.log notes/build.log 2>/dev/null || true
+          cd notes
+          git init -q -b ci-notes
+          git config user.name "neon-ci"
+          git config user.email "ci@neon.invalid"
+          git add -A
+          git commit -qm "ci notes ${{ github.run_number }}"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" ci-notes
+
+      - name: Собранные jar
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neonclient
+          path: client/*/build/libs/neonclient-*.jar

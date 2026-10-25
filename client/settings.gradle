@@ -1,0 +1,11 @@
+pluginManagement {
+    repositories {
+        maven { name = 'Fabric'; url = 'https://maven.fabricmc.net/' }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'neon-client'
+// одна папка — одна версия Minecraft: API рендера между ними сильно отличается
+include 'mc1201', 'mc12111'
