@@ -209,6 +209,13 @@ export function buildCommand(profile: Profile, prep: Prepared, account: Account,
     '-XX:MaxGCPauseMillis=50',
     '-Dfile.encoding=UTF-8',
   ];
+  // нативные библиотеки LWJGL/JNA/Netty распаковываются в папку версии, а не в %TEMP% —
+  // чтобы после удаления лаунчера в системе ничего не оставалось
+  jvm.push(
+    `-Dorg.lwjgl.system.SharedLibraryExtractPath=${prep.nativesDir}`,
+    `-Djna.tmpdir=${prep.nativesDir}`,
+    `-Dio.netty.native.workdir=${prep.nativesDir}`,
+  );
   if (authlib) jvm.push(`-javaagent:${authlib}=ely.by`);
   jvm.push(...splitArgs(profile.jvmArgs));
   if (prep.loggingArg) jvm.push(prep.loggingArg);

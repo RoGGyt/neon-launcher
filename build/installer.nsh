@@ -1,6 +1,7 @@
 ﻿; Дополнение к установщику Neon Launcher (electron-builder подключает build/installer.nsh сам).
 ; При удалении лаунчера стираем всё, что он скачал: версии игры, библиотеки, Java,
-; профили с модами и шейдерами. При автообновлении (${isUpdated}) ничего не трогаем,
+; профили с модами и шейдерами, кэш обновлений. Настройки и кэш самого окна
+; (%APPDATA%\Neon Launcher) удаляет electron-builder: deleteAppDataOnUninstall. При автообновлении (${isUpdated}) ничего не трогаем,
 ; иначе каждое обновление удаляло бы игру.
 
 !macro customUnInstall
@@ -14,5 +15,8 @@
       RMDir /r "$R9\.neonlauncher"
       neon_keep_data:
     ${endIf}
+    ; скачанные, но не установленные обновления лаунчера
+    ExpandEnvStrings $R8 "%LOCALAPPDATA%"
+    RMDir /r "$R8\neon-launcher-updater"
   ${endIf}
 !macroend
