@@ -130,6 +130,11 @@ public final class Ui {
         g.blitNineSliced(WIDGETS, x, y, w, h, 20, 4, 200, 20, 0, !active ? 46 : hot ? 86 : 66);
     }
 
+    public static void selection(GuiGraphics g, int x, int y, int w, int h) {
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+        g.blitNineSliced(WIDGETS, x, y, w, h, 5, 5, 32, 32, 40, 112);
+    }
+
     public static void panel(GuiGraphics g, int x, int y, int w, int h) {
         com.mojang.blaze3d.systems.RenderSystem.enableBlend();
         g.blitNineSliced(WIDGETS, x, y, w, h, 5, 5, 32, 32, 0, 112);

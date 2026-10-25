@@ -15,6 +15,8 @@ public abstract class SliderMixin {
             target = "Lnet/minecraft/client/gui/GuiGraphics;blitNineSliced(Lnet/minecraft/resources/ResourceLocation;IIIIIIIIII)V"))
     private void neon$track(GuiGraphics g, ResourceLocation tex, int x, int y, int w, int h, int sw, int sh, int uw, int vh, int u, int v) {
         Ui.button(g, x, y, w, h, true, v > 0);
+        // тонкая дорожка внизу, ручка едет по ней и не закрывает подпись
+        g.fill(x + 5, y + h - 4, x + w - 5, y + h - 3, 0x1FFFFFFF);
     }
 
     @Redirect(method = "renderWidget", at = @At(value = "INVOKE", ordinal = 1,

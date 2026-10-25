@@ -5,7 +5,9 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "MinecraftMixin",
+    "GameRendererMixin",
     "ScreenMixin",
+    "FontMixin",
     "AbstractWidgetMixin",
     "WithInactiveMessageMixin",
     "GuiGraphicsMixin",

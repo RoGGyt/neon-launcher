@@ -73,6 +73,7 @@ public final class Ui {
     // ---- весь текст экранов (не HUD) — шрифтом Inter ----
 
     private static int screenDepth, suspended;
+    private static boolean inFrame;
 
     /** Экраны, где текст должен совпадать с миром/HUD: чат, таблички, книги — их не трогаем */
     public static boolean styled(Screen s) {
@@ -92,12 +93,20 @@ public final class Ui {
         if (styled(s) && screenDepth > 0) screenDepth--;
     }
 
+    public static void frame(boolean on) {
+        inFrame = on;
+        if (!on) screenDepth = 0;
+    }
+
     public static void suspend(boolean on) {
         suspended += on ? 1 : (suspended > 0 ? -1 : 0);
     }
 
+    /** Сейчас считается/рисуется текст экрана: при отрисовке экрана или вне кадра (ввод, вёрстка) при открытом экране */
     public static boolean inScreen() {
-        return screenDepth > 0 && suspended == 0;
+        if (suspended > 0) return false;
+        if (screenDepth > 0) return true;
+        return !inFrame && styledScreen();
     }
 
     public static boolean isDefault(Style st) {
