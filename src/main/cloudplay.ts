@@ -5,6 +5,7 @@ import fsp from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
 import { paths, safeJoin } from './paths';
+import { resourceFile } from './resources';
 import { YaDisk, Cloud } from './yadisk';
 import { syncDown, syncUp, readManifest, worldRoot } from './cloudsync';
 import { launchProfile, killGame, isRunning, LaunchHooks, LaunchOptions } from './launch';
@@ -93,14 +94,8 @@ async function ensureHelpers(p: Profile, log: (s: string) => void) {
   await fsp.copyFile(helper, dest);
 }
 
-let resourcesDir = '';
-export function setResourcesDir(dir: string) { resourcesDir = dir; }
 function autohostJar(): string | null {
-  for (const dir of [resourcesDir, path.join(__dirname, '..', '..', 'resources')]) {
-    const f = dir && path.join(dir, 'neon-autohost.jar');
-    if (f && fs.existsSync(f)) return f;
-  }
-  return null;
+  return resourceFile('neon-autohost.jar');
 }
 
 /** e4all: без проверки лицензии (для оффлайн-ников), без приветствий */

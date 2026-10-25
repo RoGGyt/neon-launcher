@@ -1,9 +1,7 @@
 name: Сборка Neon Client
 
+# только вручную: собирает клиент и выгружает сигнатуры классов Minecraft для разработки
 on:
-  push:
-    branches: [main]
-    paths: ['client/**', '.github/workflows/client.yml']
   workflow_dispatch:
 
 permissions:

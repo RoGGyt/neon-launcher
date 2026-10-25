@@ -68,6 +68,8 @@ export interface Settings {
   showOld: boolean;
   afterLaunch: 'keep' | 'hide' | 'close';
   parallelDownloads: number;
+  /** своё главное меню в игре (Neon Client); по умолчанию включено */
+  neonMenu?: boolean;
   /** id этой установки лаунчера (для выбора хоста облачного мира) */
   installId?: string;
   /** вход в Яндекс для создания облачных миров */

@@ -4,3 +4,4 @@ release/
 client/.gradle/
 client/**/build/
 client/build.log
+resources/neonclient-*.jar

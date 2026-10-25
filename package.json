@@ -75,7 +75,8 @@
         "from": "resources",
         "to": ".",
         "filter": [
-          "neon-autohost.jar"
+          "neon-autohost.jar",
+          "neonclient-*.jar"
         ]
       }
     ]
