@@ -24,6 +24,8 @@ subprojects {
     }
 
     loom {
+        def aw = file('src/main/resources/neonclient.accesswidener')
+        if (aw.exists()) accessWidenerPath = aw
         runs {
             client {
                 programArgs '--width', '1920', '--height', '1080'

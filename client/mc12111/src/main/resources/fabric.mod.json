@@ -17,5 +17,6 @@
   },
   "mixins": [
     "neonclient.mixins.json"
-  ]
+  ],
+  "accessWidener": "neonclient.accesswidener"
 }
