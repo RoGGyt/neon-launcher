@@ -38,37 +38,55 @@ jobs:
             echo "jar for $v: $JAR" >> notes/jars.txt
             [ -z "$JAR" ] && continue
             : > notes/$v.txt
+            # сигнатуры
             for c in \
-              net.minecraft.client.Minecraft \
               net.minecraft.client.gui.screens.Screen \
-              net.minecraft.client.gui.screens.TitleScreen \
               net.minecraft.client.gui.GuiGraphics \
-              net.minecraft.client.gui.components.Button \
-              'net.minecraft.client.gui.components.Button$Builder' \
               net.minecraft.client.gui.components.AbstractWidget \
-              net.minecraft.client.gui.components.PlayerSkinWidget \
-              net.minecraft.client.gui.components.PlayerFaceRenderer \
-              net.minecraft.client.resources.SkinManager \
-              net.minecraft.client.resources.PlayerSkin \
-              net.minecraft.world.entity.player.PlayerSkin \
-              net.minecraft.client.resources.DefaultPlayerSkin \
-              net.minecraft.client.gui.screens.inventory.InventoryScreen \
-              net.minecraft.client.gui.screens.worldselection.SelectWorldScreen \
-              net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen \
-              net.minecraft.client.gui.screens.OptionsScreen \
-              net.minecraft.client.gui.screens.options.OptionsScreen \
-              net.minecraft.client.gui.Font \
-              net.minecraft.client.User \
-              net.minecraft.client.model.PlayerModel \
-              net.minecraft.client.model.geom.ModelLayers \
-              net.minecraft.client.model.geom.EntityModelSet \
-              net.minecraft.client.gui.components.events.GuiEventListener \
-              net.minecraft.network.chat.Component \
-              com.mojang.blaze3d.vertex.PoseStack \
-              org.joml.Matrix3x2fStack \
-              net.minecraft.client.gui.screens.ConfirmScreen ; do
+              net.minecraft.client.gui.components.AbstractButton \
+              net.minecraft.client.gui.components.Button \
+              net.minecraft.client.gui.components.CycleButton \
+              net.minecraft.client.gui.components.AbstractSliderButton \
+              net.minecraft.client.gui.components.EditBox \
+              net.minecraft.client.gui.components.Checkbox \
+              net.minecraft.client.gui.components.AbstractSelectionList \
+              net.minecraft.client.gui.components.AbstractScrollArea \
+              net.minecraft.client.gui.components.ImageButton \
+              net.minecraft.client.gui.components.WidgetSprites \
+              net.minecraft.client.gui.components.tabs.TabButton \
+              net.minecraft.client.gui.components.tabs.TabNavigationBar \
+              net.minecraft.client.renderer.PanoramaRenderer \
+              net.minecraft.client.renderer.CubeMap \
+              net.minecraft.client.gui.screens.LoadingOverlay \
+              net.minecraft.client.gui.screens.TitleScreen \
+              net.minecraft.client.gui.screens.PauseScreen \
+              com.mojang.blaze3d.platform.NativeImage \
+              net.minecraft.client.renderer.texture.DynamicTexture \
+              net.minecraft.client.renderer.texture.TextureManager \
+              net.minecraft.client.renderer.RenderPipelines \
+              net.minecraft.resources.ResourceLocation \
+              net.minecraft.resources.Identifier \
+              net.minecraft.client.gui.components.Tooltip \
+              net.minecraft.client.gui.Font ; do
               echo "=== $c" >> notes/$v.txt
               javap -p -cp "$JAR" "$c" >> notes/$v.txt 2>&1 || true
+            done
+            # байткод методов отрисовки — чтобы видеть, что именно рисует игра
+            : > notes/$v-code.txt
+            for c in \
+              net.minecraft.client.gui.components.AbstractButton \
+              net.minecraft.client.gui.components.Button \
+              net.minecraft.client.gui.components.AbstractSliderButton \
+              net.minecraft.client.gui.components.Checkbox \
+              net.minecraft.client.gui.components.AbstractSelectionList \
+              net.minecraft.client.gui.components.AbstractScrollArea \
+              net.minecraft.client.gui.components.tabs.TabButton \
+              net.minecraft.client.gui.components.tabs.TabNavigationBar \
+              net.minecraft.client.gui.screens.Screen ; do
+              echo "=== $c" >> notes/$v-code.txt
+              javap -p -c -cp "$JAR" "$c" 2>&1 | grep -E "^  [a-z].*\(|invoke|getstatic|putfield|getfield|ldc" | grep -vE "Narrat|narrat" >> notes/$v-code.txt || true
+            done
+            javap -p -c -cp "$JAR" net.minecraft.client.gui.components.EditBox 2>&1 | awk '/renderWidget/,/^$/' >> notes/$v-code.txt || true
             done
           done
           ls -la notes
