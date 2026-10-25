@@ -30,4 +30,11 @@ public abstract class CreateWorldScreenMixin extends Screen {
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
     }
+
+    @org.spongepowered.asm.mixin.injection.Redirect(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;blit(Lnet/minecraft/resources/ResourceLocation;IIFFIIII)V"), require = 0)
+    private void neon$separator(GuiGraphics g, net.minecraft.resources.ResourceLocation tex, int x, int y, float u, float v, int w, int h, int tw, int th) {
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        g.blit(tex, x, y, u, v, w, h, tw, th);
+    }
 }

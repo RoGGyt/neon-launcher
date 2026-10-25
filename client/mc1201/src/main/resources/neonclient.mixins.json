@@ -15,6 +15,7 @@
     "EditBoxMixin",
     "AbstractSelectionListMixin",
     "TooltipMixin",
+    "TabButtonMixin",
     "TabNavigationBarMixin",
     "CreateWorldScreenMixin",
     "LoadingOverlayMixin"

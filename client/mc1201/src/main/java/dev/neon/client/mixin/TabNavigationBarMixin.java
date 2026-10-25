@@ -21,5 +21,14 @@ public abstract class TabNavigationBarMixin {
     @Redirect(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;fill(IIIII)V"), require = 0)
     private void neon$noBlackBar(GuiGraphics g, int x1, int y1, int x2, int y2, int color) {
         g.fill(x1, y1, x2, y2, 0x33000000);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+    }
+
+    @Redirect(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;blit(Lnet/minecraft/resources/ResourceLocation;IIFFIIII)V"), require = 0)
+    private void neon$separator(GuiGraphics g, net.minecraft.resources.ResourceLocation tex, int x, int y, float u, float v, int w, int h, int tw, int th) {
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        g.blit(tex, x, y, u, v, w, h, tw, th);
     }
 }
