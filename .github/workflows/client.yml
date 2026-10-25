@@ -28,7 +28,7 @@ jobs:
         working-directory: client
         run: |
           set -o pipefail
-          gradle build --no-daemon --stacktrace 2>&1 | tee build.log
+          gradle build --continue --no-daemon 2>&1 | tee build.log
 
       - name: Сигнатуры классов Minecraft (для разработки)
         if: always()

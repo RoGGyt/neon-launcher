@@ -5,7 +5,6 @@ import com.mojang.authlib.minecraft.MinecraftProfileTexture;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
-import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.model.PlayerModel;
@@ -54,7 +53,7 @@ public final class PlayerPreview {
         m.setAllVisible(true);
 
         // лёгкое покачивание, пока мышкой не крутят
-        float sway = (float) Math.sin(Util.getMillis() / 1600.0) * 4f;
+        float sway = (float) Math.sin(System.currentTimeMillis() / 1600.0) * 4f;
 
         PoseStack pose = g.pose();
         pose.pushPose();

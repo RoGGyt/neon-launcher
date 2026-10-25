@@ -1,6 +1,5 @@
 package dev.neon.client;
 
-import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
@@ -37,7 +36,7 @@ public final class NeonStyle {
     }
 
     public static void background(GuiGraphics g, int w, int h) {
-        long now = Util.getMillis();
+        long now = System.currentTimeMillis();
         int horizon = (int) (h * 0.62f);
 
         // небо
