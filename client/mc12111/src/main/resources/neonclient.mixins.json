@@ -4,7 +4,10 @@
   "package": "dev.neon.client.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "MinecraftMixin"
+    "MinecraftMixin",
+    "ScreenMixin",
+    "AbstractWidgetMixin",
+    "LoadingOverlayMixin"
   ],
   "injectors": {
     "defaultRequire": 1

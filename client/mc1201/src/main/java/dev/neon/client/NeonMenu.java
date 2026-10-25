@@ -2,21 +2,21 @@ package dev.neon.client;
 
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.PlayerFaceRenderer;
 import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.LanguageSelectScreen;
 import net.minecraft.client.gui.screens.OptionsScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
+import net.minecraft.client.gui.screens.packs.PackSelectionScreen;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 
 /** Главное меню Neon (Minecraft 1.20.1) */
 public class NeonMenu extends Screen {
-    private final PlayerPreview player = new PlayerPreview();
-    private int logoScale;
-    private int logoY;
-    private int px, py, pw, ph;
-    private boolean showPlayer;
-    private boolean dragging;
+    private int logoW, logoY;
+    private String version = "";
 
     public NeonMenu() {
         super(Component.literal("Neon"));
@@ -24,105 +24,72 @@ public class NeonMenu extends Screen {
 
     @Override
     protected void init() {
-        boolean small = height < 320;
-        logoScale = small ? 3 : 5;
-        logoY = small ? 18 : 34;
-        int left = Math.max(16, width / 14);
-        int bw = Math.min(200, Math.max(150, width / 4));
-        int bh = small ? 18 : 22;
-        int gap = small ? 4 : 6;
-        int y = logoY + 9 * logoScale + (small ? 22 : 34);
+        version = FabricLoader.getInstance().getModContainer("minecraft")
+                .map(c -> c.getMetadata().getVersion().getFriendlyString()).orElse("");
+        int cx = width / 2;
+        int bw = 150, bh = 20, gap = 4;
+        logoW = Math.min(112, width / 4);
+        int logoH = Math.round(logoW * 264f / 1040f);
+        int block = logoH + 26 + 3 * bh + 2 * gap;
+        logoY = Math.max(24, (height - block) / 2 - 12);
+        int y = logoY + logoH + 26;
 
-        addRenderableWidget(new NeonButton(left, y, bw, bh, Component.translatable("menu.singleplayer"),
+        addRenderableWidget(new NeonButton(cx - bw / 2, y, bw, bh, Component.translatable("menu.singleplayer"), "user",
                 b -> minecraft.setScreen(new SelectWorldScreen(this))));
         y += bh + gap;
-        addRenderableWidget(new NeonButton(left, y, bw, bh, Component.translatable("menu.multiplayer"),
+        addRenderableWidget(new NeonButton(cx - bw / 2, y, bw, bh, Component.translatable("menu.multiplayer"), "users",
                 b -> minecraft.setScreen(new JoinMultiplayerScreen(this))));
         y += bh + gap;
-        addRenderableWidget(new NeonButton(left, y, bw, bh, Component.literal(NeonStyle.t("Моды", "Mods")),
+        addRenderableWidget(new NeonButton(cx - bw / 2, y, bw, bh, Ui.text(Ui.t("Моды", "Mods")), "puzzle",
                 b -> minecraft.setScreen(new NeonModsScreen(this))));
-        y += bh + gap;
-        NeonButton shaders = addRenderableWidget(new NeonButton(left, y, bw, bh, Component.literal(NeonStyle.t("Шейдеры", "Shaders")),
-                b -> { Screen s = Shaders.screen(this); if (s != null) minecraft.setScreen(s); }));
+
+        int s = 20, n = 5;
+        int bx = cx - (n * s + (n - 1) * gap) / 2;
+        int by = height - s - 14;
+        addRenderableWidget(NeonButton.icon(bx, by, s, "settings", Component.translatable("menu.options"),
+                b -> minecraft.setScreen(new OptionsScreen(this, minecraft.options))));
+        bx += s + gap;
+        NeonButton shaders = addRenderableWidget(NeonButton.icon(bx, by, s, "sun", Ui.text(Ui.t("Шейдеры", "Shaders")),
+                b -> { Screen sc = Shaders.screen(this); if (sc != null) minecraft.setScreen(sc); }));
         if (!Shaders.available()) {
             shaders.active = false;
-            shaders.setTooltip(Tooltip.create(Component.literal(NeonStyle.t(
-                    "Шейдеры работают через Iris — поставь любой шейдер во вкладке «Шейдеры» в лаунчере",
-                    "Shaders need Iris — install a shader pack from the launcher"))));
+            shaders.setTooltip(Tooltip.create(Ui.text(Ui.t(
+                    "Шейдеры работают через Iris: поставь шейдер в лаунчере, во вкладке «Шейдеры»",
+                    "Shaders need Iris: install a shader pack in the launcher"))));
         }
-        y += bh + gap;
-        addRenderableWidget(new NeonButton(left, y, bw, bh, Component.translatable("menu.options"),
-                b -> minecraft.setScreen(new OptionsScreen(this, minecraft.options))));
-        y += bh + gap;
-        addRenderableWidget(new NeonButton(left, y, bw, bh, Component.translatable("menu.quit"),
+        bx += s + gap;
+        addRenderableWidget(NeonButton.icon(bx, by, s, "layers", Component.translatable("options.resourcepack"),
+                b -> minecraft.setScreen(new PackSelectionScreen(minecraft.getResourcePackRepository(), repo -> {
+                    minecraft.options.updateResourcePacks(repo);
+                    minecraft.setScreen(this);
+                }, minecraft.getResourcePackDirectory(), Component.translatable("resourcePack.title")))));
+        bx += s + gap;
+        addRenderableWidget(NeonButton.icon(bx, by, s, "globe", Component.translatable("options.language"),
+                b -> minecraft.setScreen(new LanguageSelectScreen(this, minecraft.options, minecraft.getLanguageManager()))));
+        bx += s + gap;
+        addRenderableWidget(NeonButton.icon(bx, by, s, "power", Component.translatable("menu.quit"),
                 b -> minecraft.stop()));
-
-        ph = Math.min((int) (height * 0.62f), 260);
-        pw = ph / 2;
-        px = (int) (width * 0.68f) - pw / 2;
-        py = (int) (height * 0.62f) - ph + ph / 12;
-        showPlayer = px > left + bw + 20;
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partial) {
-        NeonStyle.background(g, width, height);
-        int left = Math.max(16, width / 14);
-        g.fill(0, 0, left + 220, height, 0x40000000);
-
-        if (showPlayer) {
-            try {
-                player.render(g, px, py, pw, ph);
-            } catch (Throwable t) {
-                showPlayer = false;
-                System.out.println("[NeonClient] player preview disabled: " + t);
-            }
-        }
-
+        Ui.background(g, width, height, mouseX, mouseY);
         super.render(g, mouseX, mouseY, partial);
+        Ui.logo(g, (width - logoW) / 2, logoY, logoW);
 
-        g.pose().pushPose();
-        g.pose().translate(left, logoY, 0);
-        g.pose().scale(logoScale, logoScale, 1);
-        g.drawString(font, "NEON", 1, 1, NeonStyle.MAGENTA, false);
-        g.drawString(font, "NEON", 0, 0, NeonStyle.CYAN, false);
-        g.pose().popPose();
-        g.drawString(font, "launcher", left + 2, logoY + 9 * logoScale + 4, NeonStyle.MUTE, false);
-
-        String nick = minecraft.getUser().getName();
-        String mc = FabricLoader.getInstance().getModContainer("minecraft")
-                .map(c -> c.getMetadata().getVersion().getFriendlyString()).orElse("");
-        g.drawString(font, nick, left, height - 28, NeonStyle.INK, true);
-        g.drawString(font, "Neon Client  " + mc, left, height - 16, NeonStyle.MUTE, false);
-
-        String copy = "Copyright Mojang AB. Do not distribute!";
-        g.drawString(font, copy, width - font.width(copy) - 6, height - 12, 0x99FFFFFF, false);
-    }
-
-    // модель крутится, если тянуть мышкой
-    @Override
-    public boolean mouseClicked(double mx, double my, int button) {
-        if (showPlayer && mx >= px && mx <= px + pw && my >= py && my <= py + ph) {
-            dragging = true;
-            return true;
+        Component name = Ui.text(minecraft.getUser().getName());
+        int pw = 8 + 12 + 6 + font.width(name) + 9;
+        Ui.panel(g, 8, 8, pw, 22);
+        try {
+            ResourceLocation skin = minecraft.getSkinManager().getInsecureSkinLocation(minecraft.getUser().getGameProfile());
+            PlayerFaceRenderer.draw(g, skin, 13, 13, 12);
+        } catch (Throwable ignored) {
         }
-        return super.mouseClicked(mx, my, button);
-    }
+        g.drawString(font, name, 13 + 12 + 6, 15, Ui.TEXT, false);
 
-    @Override
-    public boolean mouseReleased(double mx, double my, int button) {
-        dragging = false;
-        return super.mouseReleased(mx, my, button);
-    }
-
-    @Override
-    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
-        if (dragging) {
-            player.rotY += (float) dx * 2.5f;
-            player.rotX = Math.max(-50f, Math.min(50f, player.rotX - (float) dy * 2.5f));
-            return true;
-        }
-        return super.mouseDragged(mx, my, button, dx, dy);
+        g.drawString(font, Ui.text("Neon Client · " + version), 10, height - 16, Ui.FAINT, false);
+        Component legal = Ui.text(Ui.t("Не связан с Mojang и Microsoft", "Not affiliated with Mojang or Microsoft"));
+        g.drawString(font, legal, width - 10 - font.width(legal), height - 16, Ui.FAINT, false);
     }
 
     @Override

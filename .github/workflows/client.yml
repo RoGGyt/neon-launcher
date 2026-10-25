@@ -115,7 +115,11 @@ jobs:
               net.minecraft.client.gui.components.OptionsList \
               net.minecraft.client.gui.components.AbstractContainerWidget \
               net.minecraft.util.ARGB \
-              net.minecraft.client.gui.render.TextureSetup ; do
+              net.minecraft.client.gui.render.TextureSetup \
+              net.minecraft.client.gui.components.AbstractSliderButton \
+              net.minecraft.client.gui.screens.inventory.tooltip.TooltipRenderUtil \
+              net.minecraft.client.gui.components.Checkbox \
+              net.minecraft.client.gui.components.Tooltip ; do
               echo "=== $c" >> notes/$v.txt
               javap -p -cp "$JAR" "$c" >> notes/$v.txt 2>&1 || true
             done
@@ -135,6 +139,12 @@ jobs:
               net.minecraft.client.gui.screens.PauseScreen \
               net.minecraft.client.gui.layouts.HeaderAndFooterLayout \
               net.minecraft.client.gui.screens.options.OptionsSubScreen \
+              net.minecraft.client.gui.components.AbstractSliderButton \
+              net.minecraft.client.gui.screens.inventory.tooltip.TooltipRenderUtil \
+              net.minecraft.client.gui.components.Checkbox \
+              net.minecraft.client.gui.components.CycleButton \
+              net.minecraft.client.gui.components.OptionsList \
+              net.minecraft.client.gui.screens.TitleScreen \
               net.minecraft.client.gui.GuiGraphics ; do
               echo "=== $c" >> notes/$v-code.txt
               javap -p -c -cp "$JAR" "$c" 2>&1 | grep -E "^  [a-z].*\(|invoke|getstatic|putstatic|putfield|getfield|ldc|sipush|bipush|iconst" | grep -vE "Narrat|narrat" >> notes/$v-code.txt || true

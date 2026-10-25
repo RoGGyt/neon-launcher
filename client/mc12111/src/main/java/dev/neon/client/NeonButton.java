@@ -1,25 +1,60 @@
 package dev.neon.client;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 
-/** Кнопка в неоновом стиле: тёмная плашка, при наведении — бирюзовая подсветка и полоска слева */
+/**
+ * Кнопка Neon: тёмное стекло со скруглением, иконка и текст по центру.
+ * Если текста нет — это квадратная кнопка-иконка с подсказкой.
+ */
 public class NeonButton extends Button {
-    public NeonButton(int x, int y, int w, int h, Component text, OnPress onPress) {
-        super(x, y, w, h, text, onPress, DEFAULT_NARRATION);
+    private final String icon;
+    private final boolean iconOnly;
+
+    public NeonButton(int x, int y, int w, int h, Component text, String icon, OnPress onPress) {
+        super(x, y, w, h, Ui.style(text), onPress, DEFAULT_NARRATION);
+        this.icon = icon;
+        this.iconOnly = false;
+    }
+
+    /** Квадратная кнопка-иконка; text — подсказка и озвучка */
+    public static NeonButton icon(int x, int y, int size, String icon, Component text, OnPress onPress) {
+        NeonButton b = new NeonButton(x, y, size, size, text, icon, onPress, true);
+        b.setTooltip(Tooltip.create(Ui.style(text)));
+        return b;
+    }
+
+    private NeonButton(int x, int y, int w, int h, Component text, String icon, OnPress onPress, boolean iconOnly) {
+        super(x, y, w, h, Ui.style(text), onPress, DEFAULT_NARRATION);
+        this.icon = icon;
+        this.iconOnly = iconOnly;
     }
 
     @Override
     protected void renderContents(GuiGraphics g, int mouseX, int mouseY, float partial) {
         int x = getX(), y = getY(), w = getWidth(), h = getHeight();
         boolean hot = active && isHoveredOrFocused();
-        g.fill(x, y, x + w, y + h, hot ? 0xD0101A3A : 0xB00B0D1F);
-        g.renderOutline(x, y, w, h, hot ? NeonStyle.CYAN : 0x55828FFF);
-        if (hot) g.fill(x, y, x + 2, y + h, NeonStyle.CYAN);
-        int color = !active ? 0xFF5D6290 : hot ? 0xFFFFFFFF : 0xFFC5C9EC;
-        var font = Minecraft.getInstance().font;
-        g.drawString(font, getMessage(), x + 12, y + (h - font.lineHeight) / 2 + 1, color, false);
+        g.blitSprite(RenderPipelines.GUI_TEXTURED, !active ? Ui.BUTTON_DISABLED : hot ? Ui.BUTTON_HOVER : Ui.BUTTON, x, y, w, h);
+        int color = !active ? Ui.DISABLED : hot ? Ui.TEXT_HOVER : Ui.TEXT;
+        int iconColor = !active ? Ui.DISABLED : hot ? Ui.TEXT_HOVER : 0xFFB9BDC9;
+
+        if (iconOnly) {
+            int s = Math.min(10, h - 8);
+            Ui.icon(g, icon, x + (w - s) / 2, y + (h - s) / 2, s, iconColor);
+            return;
+        }
+        Font font = Minecraft.getInstance().font;
+        Component label = Ui.style(getMessage());
+        int tw = font.width(label);
+        int is = icon != null ? 9 : 0;
+        int gap = icon != null ? 6 : 0;
+        int sx = x + (w - (is + gap + tw)) / 2;
+        if (icon != null) Ui.icon(g, icon, sx, y + (h - is) / 2, is, iconColor);
+        g.drawString(font, label, sx + is + gap, y + (h - 8) / 2, color, false);
     }
 }
