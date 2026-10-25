@@ -3,6 +3,8 @@ name: Сборка лаунчера
 on:
   push:
     branches: [main]
+    # правки сайта не пересобирают лаунчер
+    paths-ignore: ['site/**', 'README.md']
   workflow_dispatch:
 
 permissions:
