@@ -8,6 +8,7 @@
     "GameRendererMixin",
     "ScreenMixin",
     "FontMixin",
+    "TrueTypeGlyphMixin",
     "GuiGraphicsMixin",
     "AbstractWidgetMixin",
     "AbstractButtonMixin",

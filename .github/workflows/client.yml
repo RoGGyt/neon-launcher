@@ -127,7 +127,9 @@ jobs:
               'net.minecraft.client.gui.components.AbstractSelectionList$Entry' \
               net.minecraft.client.gui.components.tabs.TabButton \
               net.minecraft.client.gui.font.FontManager \
-              net.minecraft.client.gui.font.FontSet ; do
+              net.minecraft.client.gui.font.FontSet \
+              com.mojang.blaze3d.font.TrueTypeGlyphProvider \
+              'com.mojang.blaze3d.font.TrueTypeGlyphProvider$Glyph' ; do
               echo "=== $c" >> notes/$v.txt
               javap -p -cp "$JAR" "$c" >> notes/$v.txt 2>&1 || true
             done
