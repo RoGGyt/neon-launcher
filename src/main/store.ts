@@ -63,7 +63,7 @@ export async function saveSettings(patch: Partial<Settings>): Promise<Settings> 
 let profiles: Profile[] | null = null;
 
 export function listProfiles(): Profile[] {
-  if (!profiles) profiles = readJson<Profile[]>(paths.profilesFile, []);
+  if (!profiles) profiles = readJson<Profile[]>(paths.profilesFile, []).filter(p => p && typeof p.id === 'string');
   return profiles;
 }
 
@@ -73,27 +73,33 @@ export function getProfile(id: string): Profile {
   return p;
 }
 
-export async function saveProfile(input: Partial<Profile> & { name: string; mcVersion: string; loader: Loader }): Promise<Profile> {
+export async function saveProfile(raw: Partial<Profile> & { name: string; mcVersion: string; loader: Loader }): Promise<Profile> {
+  // undefined-поля из интерфейса не должны затирать значения по умолчанию (в т.ч. id)
+  const input = Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== undefined)) as typeof raw;
   const list = listProfiles();
   const existing = input.id ? list.find(p => p.id === input.id) : undefined;
   let profile: Profile;
   if (existing) {
-    const versionChanged = existing.mcVersion !== input.mcVersion || existing.loader !== input.loader || existing.loaderVersion !== input.loaderVersion;
+    const versionChanged = existing.mcVersion !== input.mcVersion || existing.loader !== input.loader || existing.loaderVersion !== raw.loaderVersion;
     profile = { ...existing, ...input, id: existing.id };
-    if (versionChanged) profile.installedVersionId = undefined;
-    list[list.indexOf(existing)] = profile;
+    // поля, которые очистили в форме
+    for (const k of ['loaderVersion', 'javaPath', 'jvmArgs', 'width', 'height'] as const) {
+      if (raw[k] === undefined) delete profile[k];
+    }
+    if (versionChanged) delete profile.installedVersionId;
   } else {
     profile = {
-      id: crypto.randomUUID().slice(0, 8),
       ramMb: getSettings().defaultRamMb,
       color: PROFILE_COLORS[list.length % PROFILE_COLORS.length],
       createdAt: Date.now(),
       ...input,
+      id: crypto.randomUUID().slice(0, 8),
     } as Profile;
-    list.push(profile);
   }
   if (profile.name.trim() === '') profile.name = `${profile.loader === 'vanilla' ? '' : profile.loader + ' '}${profile.mcVersion}`.trim();
   await fsp.mkdir(paths.profileDir(profile.id), { recursive: true });
+  if (existing) list[list.indexOf(existing)] = profile;
+  else list.push(profile);
   await writeJsonAtomic(paths.profilesFile, list);
   return profile;
 }

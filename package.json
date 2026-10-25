@@ -1,7 +1,7 @@
 {
   "name": "neon-launcher",
   "productName": "Neon Launcher",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Неоновый Minecraft-лаунчер: любые версии, Fabric/Forge, моды с Modrinth, Ely.by",
   "main": "dist/main/main.js",
   "author": "RoGGyt",
