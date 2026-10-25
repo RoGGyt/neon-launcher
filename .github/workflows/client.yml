@@ -35,7 +35,8 @@ jobs:
         run: |
           mkdir -p notes
           for v in 1.20.1 1.21.11; do
-            JAR=$(find client/.gradle ~/.gradle -name "*.jar" -path "*minecraft*" 2>/dev/null | grep -E "minecraft-(merged|client|clientOnly)[^/]*$" | grep "$v" | grep -iv sources | head -1)
+            find client/.gradle ~/.gradle -name "*.jar" -path "*minecraft*" 2>/dev/null | grep "$v" >> notes/alljars.txt || true
+            JAR=$(find client/.gradle ~/.gradle -name "*.jar" -path "*minecraftMaven*" 2>/dev/null | grep "$v" | grep -iv sources | grep -E "client|merged" | head -1)
             echo "jar for $v: $JAR" >> notes/jars.txt
             [ -z "$JAR" ] && continue
             : > notes/$v.txt
