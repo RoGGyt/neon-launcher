@@ -10,6 +10,7 @@
   <meta property="og:image" content="https://roggyt.github.io/neon-launcher/img/og.png">
   <meta property="og:type" content="website">
   <meta name="theme-color" content="#05060f">
+  <meta name="color-scheme" content="dark">
   <link rel="icon" href="img/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,7 +24,6 @@
       <nav aria-label="Разделы">
         <a href="#features">Возможности</a>
         <a href="#cloud">Облачный мир</a>
-        <a href="player.html">Профиль игрока</a>
         <a href="#faq">Вопросы</a>
       </nav>
       <a class="btn btn-sm btn-main js-download" href="https://github.com/RoGGyt/neon-launcher/releases/latest">Скачать</a>
@@ -146,24 +146,7 @@
       </div>
     </section>
 
-    <section class="block" style="padding-top:0">
-      <div class="wrap">
-        <div class="skin-teaser">
-          <div>
-            <h2>Покажи свой скин</h2>
-            <p>У каждого игрока есть страница профиля со скином в 3D. Скины берутся с Ely.by, те же, что видны в игре через лаунчер.</p>
-            <form class="nick-form" action="player.html" method="get">
-              <label class="sr" for="teaserNick" style="position:absolute;left:-9999px">Ник</label>
-              <input class="input" id="teaserNick" name="u" placeholder="Ник игрока" maxlength="16" autocomplete="off" spellcheck="false" required>
-              <button class="btn btn-main" type="submit">Открыть профиль</button>
-            </form>
-          </div>
-          <canvas class="mini-skin" id="miniSkin" width="220" height="300" aria-hidden="true"></canvas>
-        </div>
-      </div>
-    </section>
-
-    <section class="block" id="faq" style="padding-top:0">
+    <section class="block" id="faq">
       <div class="wrap">
         <div class="block-head"><h2>Вопросы</h2></div>
         <div class="faq">
