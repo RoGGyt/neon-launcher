@@ -15,15 +15,12 @@ subprojects {
     }
 
     def loaderVersion = rootProject.findProperty('loader_version') ?: '0.16.14'
-    // Fabric API нужен только при запуске игры в CI (ресурсы мода грузит fabric-resource-loader)
-    def fabricApi = rootProject.findProperty("fabric_api_${project.name}")
     def tourMode = rootProject.findProperty('tour')
 
     dependencies {
         minecraft "com.mojang:minecraft:${project.mc_version}"
         mappings loom.officialMojangMappings()
         modImplementation "net.fabricmc:fabric-loader:${loaderVersion}"
-        if (fabricApi) modLocalRuntime "net.fabricmc.fabric-api:fabric-api:${fabricApi}"
     }
 
     loom {

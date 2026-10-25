@@ -38,7 +38,9 @@ jobs:
           API1201=$(echo "$META" | grep -o '<version>[^<]*+1\.20\.1</version>' | tail -1 | sed 's/<[^>]*>//g')
           API12111=$(echo "$META" | grep -o '<version>[^<]*+1\.21\.11</version>' | tail -1 | sed 's/<[^>]*>//g')
           echo "loader=$LOADER api1201=$API1201 api12111=$API12111"
-          echo "GRADLE_ARGS=-Ploader_version=$LOADER -Pfabric_api_mc1201=$API1201 -Pfabric_api_mc12111=$API12111" >> "$GITHUB_ENV"
+          echo "GRADLE_ARGS=-Ploader_version=$LOADER" >> "$GITHUB_ENV"
+          echo "API_mc1201=$API1201" >> "$GITHUB_ENV"
+          echo "API_mc12111=$API12111" >> "$GITHUB_ENV"
           mkdir -p notes && echo "loader=$LOADER api1201=$API1201 api12111=$API12111" > notes/versions.txt
 
       - name: Сборка
@@ -173,7 +175,11 @@ jobs:
         run: |
           mkdir -p ../notes/shots
           for p in mc12111 mc1201; do
-            rm -rf $p/run/screenshots
+            rm -rf $p/run/screenshots $p/run/mods
+            # Fabric API (ресурсы мода грузит fabric-resource-loader) — готовый jar, лоадер сам переназовёт классы
+            API_VAR="API_$p"; API="${!API_VAR}"
+            mkdir -p $p/run/mods
+            curl -fsSL -o $p/run/mods/fabric-api.jar "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/$API/fabric-api-$API.jar" || echo "no fabric api for $p" >> ../notes/run-status.txt
             timeout 900 gradle :$p:runClient --no-daemon $GRADLE_ARGS -Ptour=1 > ../notes/run-$p.log 2>&1 || echo "$p exit $?" >> ../notes/run-status.txt
             mkdir -p ../notes/shots/$p
             cp $p/run/screenshots/neon_*.png ../notes/shots/$p/ 2>/dev/null || true
