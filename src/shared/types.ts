@@ -31,6 +31,11 @@ export interface Profile {
   height?: number;
   color: string;
   createdAt: number;
+  /** сервер друзей: показывается в «Сетевой игре» */
+  serverAddress?: string;
+  serverName?: string;
+  /** при нажатии «Играть» сразу заходить на сервер */
+  autoJoin?: boolean;
   lastPlayed?: number;
 }
 
@@ -140,6 +145,10 @@ export interface LauncherApi {
   toggleContent(profileId: string, kind: ContentKind, fileName: string): Promise<void>;
   deleteContent(profileId: string, kind: ContentKind, fileName: string): Promise<void>;
   openContentFolder(profileId: string, kind: ContentKind): Promise<void>;
+
+  /** код сборки для друзей */
+  exportProfileCode(profileId: string): Promise<{ code: string; skipped: number }>;
+  importProfileCode(code: string): Promise<{ profile: Profile; failed: string[] }>;
 
   getUpdateState(): Promise<UpdateState>;
   checkForUpdates(): Promise<void>;

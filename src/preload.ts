@@ -43,6 +43,9 @@ const api: LauncherApi = {
   deleteContent: (profileId, kind, file) => call('content:delete', profileId, kind, file),
   openContentFolder: (profileId, kind) => call('content:open', profileId, kind),
 
+  exportProfileCode: profileId => call('share:export', profileId),
+  importProfileCode: code => call('share:import', code),
+
   getUpdateState: () => call('update:state'),
   checkForUpdates: () => call('update:check'),
   installUpdate: () => call('update:install'),

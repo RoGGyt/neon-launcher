@@ -249,9 +249,11 @@ function viewHome(): HTMLElement {
           h('span.badge', {}, icon('cube', 14), p.mcVersion),
           h(`span.badge.loader-${p.loader}`, {}, loaderLabel(p.loader), p.loaderVersion ? ` ${p.loaderVersion.replace(`${p.mcVersion}-`, '')}` : ''),
           h('span.badge', {}, `${(p.ramMb / 1024).toFixed(1).replace('.0', '')} ГБ RAM`),
+          p.autoJoin && p.serverAddress ? h('span.badge.server', { title: '«Играть» сразу заходит на сервер' }, icon('users', 14), p.serverName || p.serverAddress) : null,
         ),
         h('div.hero-actions', {},
           playButton(),
+          h('button.btn.friends-btn', { onclick: () => openFriends(p), title: 'Играть с друзьями' }, icon('users', 18), 'С друзьями'),
           h('div.hero-side', {}, nickBlock),
         ),
         progressBar(),
@@ -282,7 +284,10 @@ function viewProfiles(): HTMLElement {
   return h('div', {},
     h('div.page-head', {},
       h('div', {}, h('h1', {}, 'Профили'), h('p.muted', {}, 'У каждого профиля своя папка: миры, моды, настройки и ресурспаки.')),
-      h('button.btn.primary', { onclick: () => editProfile() }, icon('plus'), 'Новый профиль'),
+      h('div.row', {},
+        h('button.btn.ghost', { onclick: () => openImport() }, icon('download', 16), 'Импорт по коду'),
+        h('button.btn.primary', { onclick: () => editProfile() }, icon('plus'), 'Новый профиль'),
+      ),
     ),
     state.profiles.length === 0
       ? h('div.empty-state', {}, icon('layers', 40), h('p', {}, 'Пока пусто. Создай профиль с нужной версией.'))
@@ -313,6 +318,7 @@ function profileCard(p: Profile): HTMLElement {
         },
       }, icon('play', 14), 'Играть'),
       h('button.icon-btn', { title: 'Изменить', onclick: () => editProfile(p) }, icon('edit', 16)),
+      h('button.icon-btn', { title: 'С друзьями', onclick: () => openFriends(p) }, icon('users', 16)),
       h('button.icon-btn', { title: 'Открыть папку', onclick: () => guard(() => api.openProfileFolder(p.id)) }, icon('folder', 16)),
       p.loader !== 'vanilla' ? h('button.icon-btn', { title: 'Моды', onclick: () => { state.contentProfileId = p.id; go('mods'); } }, icon('puzzle', 16)) : null,
       h('button.icon-btn.danger', { title: 'Удалить', onclick: () => removeProfile(p) }, icon('trash', 16)),
@@ -711,6 +717,175 @@ function shaderCard(profile: Profile, hit: ModrinthHit, installed: Set<string>):
       installButton(profile, 'shader', hit, installed),
     ),
   );
+}
+
+
+// ======================= С ДРУЗЬЯМИ =======================
+
+type FriendsTab = 'world' | 'server' | 'share';
+
+function openFriends(p: Profile, startTab?: FriendsTab) {
+  let tab: FriendsTab = startTab ?? (p.serverAddress ? 'server' : 'world');
+  const body = h('div.friends');
+  const m = modal('Играть с друзьями', body, [h('button.btn.ghost', { onclick: () => m.close() }, 'Закрыть')]);
+
+  const steps = (...items: (string | HTMLElement)[]) => h('ol.steps', {}, ...items.map(i => h('li', {}, i)));
+
+  const draw = () => {
+    clear(body);
+    const tabs = h('div.segmented.friends-tabs', {},
+      ...([['world', 'Мой мир'], ['server', 'Сервер 24/7'], ['share', 'Поделиться сборкой']] as [FriendsTab, string][]).map(([t, label]) =>
+        h(`button.seg${tab === t ? '.active' : ''}`, { type: 'button', onclick: () => { tab = t; draw(); } }, label)));
+    body.append(tabs);
+    if (tab === 'world') body.append(worldTab());
+    else if (tab === 'server') body.append(serverTab());
+    else body.append(shareTab());
+  };
+
+  // --- открыть свой мир через e4all ---
+  const worldTab = () => {
+    const box = h('div.friends-pane', {},
+      h('p.muted', {}, 'Друзья заходят в твой мир, пока ты в игре. Без Hamachi и проброса портов.'));
+    if (p.loader === 'vanilla') {
+      box.append(
+        h('p', {}, 'Для этого нужен мод e4all, а ему нужен Fabric.'),
+        h('button.btn.primary', { onclick: () => { m.close(); editProfile(p, { loader: 'fabric' }); } }, 'Добавить Fabric в профиль'),
+      );
+      return box;
+    }
+    const btn = h('button.btn.primary', {}, icon('download', 16), 'Установить e4all') as HTMLButtonElement;
+    const status = h('span.muted.small');
+    guard(() => api.listContent(p.id, 'mod')).then(list => {
+      if (list?.some(x => /e4all/i.test(x.title) || /^e4all/i.test(x.fileName))) {
+        btn.disabled = true;
+        btn.replaceChildren(icon('check', 16), 'e4all установлен');
+      }
+    });
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.replaceChildren('Ставлю…');
+      const res = await guard(() => api.installContent(p.id, 'mod', 'e4all'));
+      if (res) {
+        btn.replaceChildren(icon('check', 16), 'e4all установлен');
+        toast('e4all установлен', 'ok');
+      } else {
+        btn.disabled = false;
+        btn.replaceChildren(icon('download', 16), 'Установить e4all');
+        status.textContent = 'Если e4all нет для этой версии — попробуй версию 1.18 или новее.';
+      }
+    });
+    box.append(
+      h('div.row', {}, btn, status),
+      steps(
+        'Зайди в свой мир → Esc → «Открыть для сети».',
+        'Выключи «Online Mode» и нажми «Открыть мир».',
+        'В чате появится адрес — скинь его друзьям.',
+        'Друзья: «Сетевая игра» → «Прямое подключение» → адрес.',
+      ),
+      h('p.muted.small', {}, 'Пока ты не в игре, мир закрыт. Чтобы друзья играли без тебя — вкладка «Сервер 24/7».'),
+    );
+    return box;
+  };
+
+  // --- сервер, который работает без хоста ---
+  const serverTab = () => {
+    const addr = h('input.input.mono', { value: p.serverAddress ?? '', placeholder: 'наш-сервер.aternos.me:12345', spellcheck: 'false' }) as HTMLInputElement;
+    const name = h('input.input', { value: p.serverName ?? '', placeholder: 'Сервер друзей', maxlength: 40 }) as HTMLInputElement;
+    let auto = p.autoJoin ?? true;
+    const sw = h(`button.switch${auto ? '.on' : ''}`, { type: 'button' }, h('span.knob'));
+    sw.addEventListener('click', () => { auto = !auto; sw.classList.toggle('on', auto); });
+    const save = async () => {
+      const saved = await guard(() => api.saveProfile({ ...p, serverAddress: addr.value.trim(), serverName: name.value.trim(), autoJoin: auto }));
+      if (!saved) return;
+      Object.assign(p, saved);
+      state.profiles = await api.listProfiles();
+      toast(addr.value.trim() ? 'Сервер сохранён — теперь можно поделиться сборкой' : 'Сервер убран из профиля', 'ok');
+      render();
+      tab = addr.value.trim() ? 'share' : 'server';
+      draw();
+    };
+    return h('div.friends-pane', {},
+      h('p.muted', {}, 'Мир живёт на сервере и работает, даже когда тебя нет. Каждый друг заходит сам.'),
+      h('div.how', {},
+        h('div.how-title', {}, 'Как сделать бесплатный сервер (один раз)'),
+        steps(
+          h('span', {}, 'Зарегистрируйся на ', h('a', { href: 'https://aternos.org', target: '_blank' }, 'aternos.org'), ' и создай сервер.'),
+          `Выбери ту же версию: ${loaderLabel(p.loader)} ${p.mcVersion}${p.loader === 'vanilla' ? '' : ' и поставь те же моды'}.`,
+          'В «Options» включи «Cracked» — иначе ники без лицензии не пустит.',
+          'Во вкладке «Access» добавь друзей — они смогут сами запускать сервер.',
+          'Скопируй адрес сервера и вставь ниже.',
+        ),
+        h('p.muted.small', {}, 'Совет: включи whitelist и добавь туда ники друзей — с Cracked любой может зайти под чужим ником.'),
+      ),
+      h('div.field', {}, h('label', {}, 'Адрес сервера'), addr),
+      h('div.field', {}, h('label', {}, 'Название в списке'), name),
+      h('div.setting-row', {},
+        h('div', {}, h('div.setting-label', {}, 'Кнопка «Играть» сразу заходит на сервер'), h('div.muted.small', {}, 'Иначе сервер просто появится в «Сетевой игре»')),
+        sw),
+      h('button.btn.primary', { onclick: save }, 'Сохранить'),
+    );
+  };
+
+  // --- код сборки ---
+  const shareTab = () => {
+    const out = h('textarea.input.code-box', { readonly: true, rows: 4, placeholder: 'Генерирую код…' }) as HTMLTextAreaElement;
+    const info = h('p.muted.small');
+    const copy = h('button.btn.primary', { disabled: true }, icon('copy', 16), 'Скопировать код') as HTMLButtonElement;
+    copy.addEventListener('click', () => {
+      navigator.clipboard.writeText(out.value);
+      toast('Код скопирован — отправь его друзьям', 'ok', 2500);
+    });
+    guard(() => api.exportProfileCode(p.id)).then(res => {
+      if (!res) return;
+      out.value = res.code;
+      copy.disabled = false;
+      info.textContent = res.skipped
+        ? `Внимание: ${res.skipped} мод(ов) поставлены вручную, не с Modrinth — их в коде нет, скинь их друзьям файлами.`
+        : '';
+    });
+    return h('div.friends-pane', {},
+      h('p.muted', {}, 'В коде: версия, модлоадер, все моды и шейдеры точных версий' + (p.serverAddress ? ' и адрес сервера.' : '.')),
+      out,
+      info,
+      h('div.row', {}, copy),
+      steps('Друг ставит Neon Launcher.', '«Профили» → «Импорт по коду» → вставляет код.', `Жмёт «Играть»${p.autoJoin && p.serverAddress ? ' — и сразу попадает на сервер' : ''}.`),
+    );
+  };
+
+  draw();
+}
+
+function openImport() {
+  const input = h('textarea.input.code-box', { rows: 4, placeholder: 'NEON1-…', spellcheck: 'false' }) as HTMLTextAreaElement;
+  const status = h('p.muted.small');
+  const btn = h('button.btn.primary', {}, 'Создать профиль') as HTMLButtonElement;
+  const m = modal('Импорт сборки по коду', h('div.form', {},
+    h('p.muted', {}, 'Вставь код, который прислал друг. Появится такой же профиль со всеми модами.'),
+    input, status), [
+    h('button.btn.ghost', { onclick: () => m.close() }, 'Отмена'),
+    btn,
+  ]);
+  setTimeout(() => input.focus(), 50);
+  btn.addEventListener('click', async () => {
+    if (!input.value.trim()) return toast('Вставь код', 'error');
+    btn.disabled = true;
+    const off = api.onProgress(pr => { if (pr) status.textContent = pr.stage; });
+    try {
+      const res = await api.importProfileCode(input.value);
+      state.profiles = await api.listProfiles();
+      state.settings = await api.saveSettings({ selectedProfileId: res.profile.id });
+      m.close();
+      if (res.failed.length) toast(`Профиль создан, но ${res.failed.length} не установилось:\n${res.failed.slice(0, 3).join('\n')}`, 'error', 9000);
+      else toast(`Профиль «${res.profile.name}» готов — жми «Играть»`, 'ok');
+      go('home');
+    } catch (e) {
+      status.textContent = '';
+      toast((e as Error).message, 'error', 6000);
+      btn.disabled = false;
+    } finally {
+      off();
+    }
+  });
 }
 
 // ======================= НАСТРОЙКИ =======================

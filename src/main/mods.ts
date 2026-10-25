@@ -25,6 +25,7 @@ interface ModrinthVersion {
 
 interface ContentMeta {
   projectId: string;
+  versionId?: string;
   title: string;
   iconUrl: string | null;
   versionNumber: string;
@@ -102,7 +103,7 @@ async function bestVersion(projectId: string, kind: ContentKind, loader: string,
 }
 
 /** Ставит мод/шейдер и обязательные зависимости. Возвращает названия установленного. */
-export async function installContent(p: Profile, kind: ContentKind, projectId: string): Promise<string[]> {
+export async function installContent(p: Profile, kind: ContentKind, projectId: string, pinnedVersionId?: string): Promise<string[]> {
   const loader = requireModdable(p, kind);
   const installed: string[] = [];
 
@@ -115,10 +116,12 @@ export async function installContent(p: Profile, kind: ContentKind, projectId: s
   const meta = await readMeta(p, kind);
   const visiting = new Set<string>();
 
-  async function install(id: string, isDependency: boolean) {
+  async function install(id: string, isDependency: boolean, pinned?: string) {
     if (visiting.has(id)) return;
     visiting.add(id);
-    const ver = await bestVersion(id, kind, loader, p.mcVersion);
+    // точная версия (из кода сборки друга), иначе лучшая подходящая
+    const ver = (pinned ? await fetchJson<ModrinthVersion>(`${API}/version/${encodeURIComponent(pinned)}`).catch(() => null) : null)
+      ?? await bestVersion(id, kind, loader, p.mcVersion);
     if (!ver) {
       if (isDependency) return;
       throw new Error(kind === 'shader' ? 'У этого шейдера нет версии для Iris' : `У мода нет версии для ${loader} ${p.mcVersion}`);
@@ -141,7 +144,7 @@ export async function installContent(p: Profile, kind: ContentKind, projectId: s
     }
 
     await downloadFile({ url: file.url, dest: safeJoin(dir, file.filename), sha1: file.hashes.sha1, size: file.size });
-    meta[file.filename] = { projectId: realId, title: project.title, iconUrl: project.icon_url, versionNumber: ver.version_number };
+    meta[file.filename] = { projectId: realId, versionId: ver.id, title: project.title, iconUrl: project.icon_url, versionNumber: ver.version_number };
     installed.push(project.title);
 
     if (kind === 'mod') {
@@ -154,9 +157,33 @@ export async function installContent(p: Profile, kind: ContentKind, projectId: s
     }
   }
 
-  await install(projectId, false);
+  await install(projectId, false, pinnedVersionId);
   await writeMeta(p, kind, meta);
   return installed;
+}
+
+/** Для кода сборки: что установлено с Modrinth (только включённые моды) */
+export async function exportContent(p: Profile, kind: ContentKind): Promise<{ list: [string, string?][]; activeShader?: string; skipped: number }> {
+  const items = await listContent(p, kind);
+  const meta = await readMeta(p, kind);
+  const list: [string, string?][] = [];
+  let skipped = 0;
+  let activeShader: string | undefined;
+  for (const it of items) {
+    if (kind === 'mod' && !it.enabled) continue;
+    const m = meta[it.fileName];
+    if (!m) { skipped++; continue; } // поставлен вручную, не с Modrinth
+    list.push(m.versionId ? [m.projectId, m.versionId] : [m.projectId]);
+    if (kind === 'shader' && it.enabled) activeShader = m.projectId;
+  }
+  return { list, activeShader, skipped };
+}
+
+/** Включить шейдер по id проекта (после импорта сборки) */
+export async function activateShaderByProject(p: Profile, projectId: string): Promise<void> {
+  const meta = await readMeta(p, 'shader');
+  const file = Object.entries(meta).find(([, m]) => m.projectId === projectId)?.[0];
+  if (file) await writeShaderConfig(p, file, true);
 }
 
 /** Iris/Oculus: если в папке mods их нет — ставим (Sodium подтянется зависимостью) */

@@ -9,6 +9,7 @@ import { listFabric, listForge } from './loaders';
 import { offlineAccount, elyLogin, elyLogout } from './auth';
 import { launchProfile, killGame, isRunning } from './launch';
 import * as mods from './mods';
+import { exportProfileCode, importProfileCode } from './share';
 import { initUpdater, getUpdateState, checkForUpdates, installUpdate, isPortable, RELEASES_URL } from './updater';
 import type { ContentKind, Loader, LogEvent, ProgressEvent } from '../shared/types';
 
@@ -163,6 +164,16 @@ function registerIpc() {
     const dir = mods.contentFolder(store.getProfile(id), K(k));
     await fsp.mkdir(dir, { recursive: true });
     await shell.openPath(dir);
+  });
+
+  handle('share:export', (id: string) => exportProfileCode(store.getProfile(id)));
+  handle('share:import', async (code: string) => {
+    try {
+      return await importProfileCode(code, (done, total, label) =>
+        hooks.progress({ stage: `${label} (${done}/${total})`, done, total }));
+    } finally {
+      hooks.progress(null);
+    }
   });
 
   handle('update:state', () => getUpdateState());

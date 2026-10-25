@@ -284,6 +284,20 @@ details.advanced .field { margin-bottom: 12px; }
 .quick.add { align-items: center; justify-content: center; flex-direction: row; gap: 8px; color: var(--muted); border-style: dashed; padding-left: 14px; }
 .quick.add:hover { color: var(--cyan); border-color: rgba(0, 240, 255, .5); }
 
+/* ---------- с друзьями ---------- */
+.friends-btn { height: 64px; padding: 0 20px; border-radius: 16px; font-size: 15px; background: rgba(255, 43, 214, .08); border-color: rgba(255, 43, 214, .45); color: #ffc2f2; }
+.friends-btn:hover:not(:disabled) { border-color: var(--pink); box-shadow: 0 0 22px rgba(255, 43, 214, .3); }
+.badge.server { color: #ffc2f2; border-color: rgba(255, 43, 214, .5); background: rgba(255, 43, 214, .08); }
+.friends { display: flex; flex-direction: column; gap: 16px; }
+.friends-tabs .seg { font-size: 13px; }
+.friends-pane { display: flex; flex-direction: column; gap: 14px; }
+.friends-pane p { margin: 0; }
+.steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; color: var(--text); }
+.steps li::marker { color: var(--cyan); font-weight: 700; }
+.how { padding: 14px 16px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+.how-title { font-weight: 650; }
+.code-box { color: var(--cyan); height: auto; min-height: 92px; padding: 10px 12px; resize: vertical; font: 12px/1.5 var(--mono); word-break: break-all; }
+
 /* ---------- страницы ---------- */
 .page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
 .page-head p { margin: 6px 0 0; }

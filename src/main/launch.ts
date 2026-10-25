@@ -13,6 +13,7 @@ import { ensureJava, checkJava } from './java';
 import { installFabric, installForge } from './loaders';
 import { elyEnsureValid, ensureAuthlibInjector } from './auth';
 import { getSettings, saveSettings, updateProfile } from './store';
+import { addServerToList } from './nbt';
 import type { Account, Profile, ProgressEvent, LogEvent } from '../shared/types';
 
 export interface LaunchHooks {
@@ -47,6 +48,24 @@ export function splitArgs(s: string | undefined): string[] {
   }
   if (has || cur) out.push(cur);
   return out;
+}
+
+/** "play.example.com:25566" -> { host, port } */
+export function parseAddress(addr: string): { host: string; port: number } | null {
+  const a = addr.trim();
+  if (!a || /\s/.test(a)) return null;
+  let host = a;
+  let portStr: string | undefined;
+  const v6 = /^\[(.+)\](?::(\d+))?$/.exec(a);
+  if (v6) {
+    host = v6[1];
+    portStr = v6[2];
+  } else if ((a.match(/:/g) ?? []).length === 1) {
+    [host, portStr] = a.split(':');
+  }
+  const port = portStr ? Number(portStr) : 25565;
+  if (!host || !Number.isInteger(port) || port < 1 || port > 65535) return null;
+  return { host, port };
 }
 
 function substitute(arg: string, vars: Record<string, string>): string {
@@ -171,7 +190,11 @@ async function resolveAccount(hooks: LaunchHooks): Promise<Account> {
 export function buildCommand(profile: Profile, prep: Prepared, account: Account, authlib: string | null): string[] {
   const v = prep.version;
   const gameDir = paths.profileDir(profile.id);
-  const features: Features = { has_custom_resolution: Boolean(profile.width && profile.height) };
+  const join = profile.autoJoin && profile.serverAddress ? parseAddress(profile.serverAddress) : null;
+  const features: Features = {
+    has_custom_resolution: Boolean(profile.width && profile.height),
+    is_quick_play_multiplayer: Boolean(join),
+  };
   const uuidNoDash = account.uuid.replace(/-/g, '');
   const token = account.type === 'ely' ? account.accessToken : '0';
   const vars: Record<string, string> = {
@@ -197,6 +220,7 @@ export function buildCommand(profile: Profile, prep: Prepared, account: Account,
     library_directory: paths.libraries,
     resolution_width: String(profile.width ?? 854),
     resolution_height: String(profile.height ?? 480),
+    quick_play_multiplayer: join ? `${join.host}:${join.port}` : '',
   };
 
   const jvm: string[] = [
@@ -233,6 +257,10 @@ export function buildCommand(profile: Profile, prep: Prepared, account: Account,
   if (features.has_custom_resolution && !game.includes('--width')) {
     game.push('--width', vars.resolution_width, '--height', vars.resolution_height);
   }
+  // сразу на сервер: в 1.20+ через quickPlay, в старых версиях через --server/--port
+  if (join && !game.includes('--quickPlayMultiplayer')) {
+    game.push('--server', join.host, '--port', String(join.port));
+  }
   return [...jvm, v.mainClass, ...game];
 }
 
@@ -262,6 +290,12 @@ export async function launchProfile(
   const prep = await prepare(profile, hooks);
   const authlib = account.type === 'ely' ? await ensureAuthlibInjector() : null;
   const args = buildCommand(profile, prep, account, authlib);
+
+  // сервер из профиля появляется в «Сетевой игре»
+  if (profile.serverAddress?.trim()) {
+    await addServerToList(path.join(paths.profileDir(profile.id), 'servers.dat'), profile.serverName?.trim() || profile.name, profile.serverAddress.trim())
+      .catch(e => hooks.log(`Не удалось добавить сервер в список: ${(e as Error).message}`, 'warn'));
+  }
 
   hooks.progress({ stage: 'Запускаю игру', done: 1, total: 1 });
   const shown = args.map(a => {
