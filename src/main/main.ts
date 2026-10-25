@@ -10,6 +10,8 @@ import { offlineAccount, elyLogin, elyLogout } from './auth';
 import { launchProfile, killGame, isRunning } from './launch';
 import * as mods from './mods';
 import { exportProfileCode, importProfileCode } from './share';
+import { playCloud, stopCloud, cloudActive, cloudBusy, localWorlds, uploadNewCloudWorld, setResourcesDir, readSession } from './cloudplay';
+import { yandexAuthUrl, parseAuthRedirect, YaDisk, YANDEX_CLIENT_ID } from './yadisk';
 import { initUpdater, getUpdateState, checkForUpdates, installUpdate, isPortable, RELEASES_URL } from './updater';
 import type { ContentKind, Loader, LogEvent, ProgressEvent } from '../shared/types';
 
@@ -17,6 +19,11 @@ let win: BrowserWindow | null = null;
 
 function send(channel: string, payload: unknown) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
+}
+
+/** состояние для интерфейса: игра идёт или облачная сессия ещё работает */
+function launchState() {
+  return { ...isRunning(), cloud: cloudActive() };
 }
 
 const hooks = {
@@ -53,7 +60,7 @@ function createWindow() {
 
   // пока игра запущена, крестик прячет лаунчер, чтобы он вернулся после выхода из игры
   win.on('close', (e: { preventDefault(): void }) => {
-    if (isRunning().running) {
+    if (isRunning().running || cloudActive() || cloudBusy()) {
       e.preventDefault();
       win?.hide();
     }
@@ -132,18 +139,35 @@ function registerIpc() {
   handle('game:launch', async (profileId: string) => {
     const profile = store.getProfile(profileId);
     await store.saveSettings({ selectedProfileId: profileId });
+    if (profile.cloud) {
+      await playCloud(profileId, hooks, {
+        status: text => send('cloud-status', text),
+        onGameStart: () => {
+          send('launch-state', launchState());
+          if (store.getSettings().afterLaunch !== 'keep') win?.hide();
+        },
+        onDone: error => {
+          send('launch-state', launchState());
+          send('cloud-status', null);
+          if (error) send('cloud-error', error);
+          if (win && !win.isVisible()) win.show();
+        },
+      });
+      send('launch-state', launchState());
+      return;
+    }
     try {
       await launchProfile(
         profile,
         hooks,
         () => {
-          send('launch-state', isRunning());
+          send('launch-state', launchState());
           const after = store.getSettings().afterLaunch;
           if (after === 'hide') win?.hide();
           if (after === 'close') setTimeout(() => app.exit(0), 300);
         },
         () => {
-          send('launch-state', isRunning());
+          send('launch-state', launchState());
           if (win && !win.isVisible()) win.show();
         },
       );
@@ -151,8 +175,37 @@ function registerIpc() {
       hooks.progress(null);
     }
   });
-  handle('game:kill', () => killGame());
-  handle('game:state', () => isRunning());
+  handle('game:kill', () => {
+    stopCloud();
+    killGame();
+  });
+  handle('game:state', () => launchState());
+
+  // ---------- облачные миры ----------
+  handle('cloud:available', () => Boolean(YANDEX_CLIENT_ID));
+  handle('cloud:login', () => yandexLogin());
+  handle('cloud:logout', () => store.saveSettings({ yandex: null }));
+  handle('cloud:worlds', (id: string) => localWorlds(store.getProfile(id)));
+  handle('cloud:create', async (id: string, folder: string) => {
+    const s = store.getSettings();
+    if (!s.yandex?.token) throw new Error('Сначала войди в Яндекс');
+    if (!s.account) throw new Error('Сначала введи ник');
+    try {
+      return await uploadNewCloudWorld(store.getProfile(id), s.yandex.token, folder, s.account.name, hooks);
+    } finally {
+      hooks.progress(null);
+    }
+  });
+  handle('cloud:detach', async (id: string) => {
+    if (cloudActive()) throw new Error('Сначала закрой игру');
+    await store.updateProfile(id, { cloud: undefined, cloudBaseVersion: undefined, cloudPendingUpload: undefined });
+  });
+  handle('cloud:who', async (id: string) => {
+    const c = store.getProfile(id).cloud;
+    if (!c) return null;
+    const s = await readSession(new YaDisk(c.token), c.worldId);
+    return s && Date.now() - s.beat < 60_000 ? { host: s.host, state: s.state } : null;
+  });
 
   const K = (k: ContentKind): ContentKind => (k === 'shader' ? 'shader' : 'mod');
   handle('content:search', (id: string, k: ContentKind, q: string, offset: number) => mods.searchContent(store.getProfile(id), K(k), q, offset));
@@ -192,6 +245,39 @@ function registerIpc() {
   });
 }
 
+/** Окно входа в Яндекс: ловим редирект с токеном (OAuth implicit flow) */
+function yandexLogin(): Promise<{ ok: true }> {
+  return new Promise((resolve, reject) => {
+    const url = yandexAuthUrl();
+    const auth = new BrowserWindow({
+      width: 520, height: 720, parent: win ?? undefined, modal: true,
+      title: 'Вход в Яндекс', backgroundColor: '#ffffff', autoHideMenuBar: true,
+      webPreferences: { partition: 'persist:yandex', contextIsolation: true, nodeIntegration: false, sandbox: true },
+    });
+    let finished = false;
+    const check = async (target: string) => {
+      const r = parseAuthRedirect(target);
+      if (!r || finished) return;
+      finished = true;
+      auth.close();
+      if ('error' in r) return reject(new Error(r.error));
+      await store.saveSettings({ yandex: { token: r.token, expiresAt: r.expiresAt } });
+      resolve({ ok: true });
+    };
+    auth.webContents.on('will-redirect', (_e: unknown, u: string) => { check(u); });
+    auth.webContents.on('will-navigate', (_e: unknown, u: string) => { check(u); });
+    auth.webContents.on('did-navigate', (_e: unknown, u: string) => { check(u); });
+    auth.webContents.on('did-navigate-in-page', (_e: unknown, u: string) => { check(u); });
+    auth.webContents.on('did-finish-load', () => { check(auth.webContents.getURL()); });
+    auth.webContents.setWindowOpenHandler(({ url: u }: { url: string }) => {
+      if (/^https:\/\//.test(u)) shell.openExternal(u);
+      return { action: 'deny' };
+    });
+    auth.on('closed', () => { if (!finished) reject(new Error('Вход в Яндекс отменён')); });
+    auth.loadURL(url);
+  });
+}
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
@@ -205,6 +291,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(async () => {
     initRoot(app.getPath('appData'));
+    setResourcesDir(app.isPackaged ? (process as NodeJS.Process & { resourcesPath: string }).resourcesPath : path.join(__dirname, '..', '..', 'resources'));
     await fsp.mkdir(paths.root, { recursive: true });
     registerIpc();
     createWindow();
@@ -213,6 +300,6 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on('window-all-closed', () => {
     // если игра запущена и окно просто спрятано — не выходим
-    if (!isRunning().running) app.quit();
+    if (!isRunning().running && !cloudActive()) app.quit();
   });
 }

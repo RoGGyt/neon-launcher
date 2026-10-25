@@ -43,6 +43,16 @@ const api: LauncherApi = {
   deleteContent: (profileId, kind, file) => call('content:delete', profileId, kind, file),
   openContentFolder: (profileId, kind) => call('content:open', profileId, kind),
 
+  cloudAvailable: () => call('cloud:available'),
+  cloudLogin: () => call('cloud:login'),
+  cloudLogout: () => call('cloud:logout'),
+  cloudWorlds: profileId => call('cloud:worlds', profileId),
+  cloudCreate: (profileId, folder) => call('cloud:create', profileId, folder),
+  cloudDetach: profileId => call('cloud:detach', profileId),
+  cloudWho: profileId => call('cloud:who', profileId),
+  onCloudStatus: cb => subscribe('cloud-status', cb),
+  onCloudError: cb => subscribe('cloud-error', cb),
+
   exportProfileCode: profileId => call('share:export', profileId),
   importProfileCode: code => call('share:import', code),
 

@@ -16,6 +16,17 @@ export interface LoaderVersion {
   recommended?: boolean;
 }
 
+/** облачный мир на Яндекс Диске создателя */
+export interface CloudWorld {
+  worldId: string;
+  /** токен доступа к папке приложения на Диске создателя мира */
+  token: string;
+  /** папка мира в saves/ */
+  folder: string;
+  worldName: string;
+  owner: string;
+}
+
 export interface Profile {
   id: string;
   name: string;
@@ -36,6 +47,11 @@ export interface Profile {
   serverName?: string;
   /** при нажатии «Играть» сразу заходить на сервер */
   autoJoin?: boolean;
+  cloud?: CloudWorld;
+  /** версия облачного мира, с которой совпадает локальная копия */
+  cloudBaseVersion?: number;
+  /** мир не успел уйти в облако — догрузить при следующем запуске */
+  cloudPendingUpload?: boolean;
   lastPlayed?: number;
 }
 
@@ -52,6 +68,10 @@ export interface Settings {
   showOld: boolean;
   afterLaunch: 'keep' | 'hide' | 'close';
   parallelDownloads: number;
+  /** id этой установки лаунчера (для выбора хоста облачного мира) */
+  installId?: string;
+  /** вход в Яндекс для создания облачных миров */
+  yandex?: { token: string; expiresAt: number; login?: string } | null;
 }
 
 export interface ProgressEvent {
@@ -112,6 +132,8 @@ export interface SystemInfo {
 export interface LaunchState {
   running: boolean;
   profileId: string | null;
+  /** облачная сессия ещё идёт (ждём хоста, сохраняем мир и т.п.) */
+  cloud?: boolean;
 }
 
 /** API, которое preload выдаёт в окно */
@@ -145,6 +167,17 @@ export interface LauncherApi {
   toggleContent(profileId: string, kind: ContentKind, fileName: string): Promise<void>;
   deleteContent(profileId: string, kind: ContentKind, fileName: string): Promise<void>;
   openContentFolder(profileId: string, kind: ContentKind): Promise<void>;
+
+  /** облачные миры (Яндекс Диск) */
+  cloudAvailable(): Promise<boolean>;
+  cloudLogin(): Promise<{ ok: true }>;
+  cloudLogout(): Promise<unknown>;
+  cloudWorlds(profileId: string): Promise<{ folder: string; lastPlayed: number }[]>;
+  cloudCreate(profileId: string, folder: string): Promise<CloudWorld>;
+  cloudDetach(profileId: string): Promise<void>;
+  cloudWho(profileId: string): Promise<{ host: string; state: string } | null>;
+  onCloudStatus(cb: (text: string | null) => void): () => void;
+  onCloudError(cb: (text: string) => void): () => void;
 
   /** код сборки для друзей */
   exportProfileCode(profileId: string): Promise<{ code: string; skipped: number }>;

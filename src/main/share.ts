@@ -18,6 +18,7 @@ interface ShareData {
   sh?: [string, string?][]; // шейдеры
   as?: string;          // активный шейдер (projectId)
   r?: number;           // RAM, МБ
+  c?: { w: string; t: string; f: string; n: string; o: string }; // облачный мир
 }
 
 export async function exportProfileCode(p: Profile): Promise<{ code: string; skipped: number }> {
@@ -26,6 +27,7 @@ export async function exportProfileCode(p: Profile): Promise<{ code: string; ski
   if (p.serverAddress) data.s = p.serverAddress;
   if (p.serverName) data.sn = p.serverName;
   if (p.autoJoin) data.j = 1;
+  if (p.cloud) data.c = { w: p.cloud.worldId, t: p.cloud.token, f: p.cloud.folder, n: p.cloud.worldName, o: p.cloud.owner };
   let skipped = 0;
   if (p.loader !== 'vanilla') {
     const mods = await exportContent(p, 'mod');
@@ -67,6 +69,7 @@ export async function importProfileCode(
     serverName: d.sn,
     autoJoin: d.j === 1,
     ...(d.r ? { ramMb: d.r } : {}),
+    ...(d.c ? { cloud: { worldId: d.c.w, token: d.c.t, folder: d.c.f, worldName: d.c.n, owner: d.c.o } } : {}),
   });
 
   const jobs: { kind: 'mod' | 'shader'; id: string; ver?: string }[] = [

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "neon-autohost",
+  "version": "1.0.0",
+  "name": "Neon AutoHost",
+  "description": "Помощник Neon Launcher для облачных миров: сам открывает мир для сети, когда лаунчер делает игрока хостом. Без флага -Dneon.autohost=true ничего не делает.",
+  "authors": ["RoGGyt"],
+  "contact": { "sources": "https://github.com/RoGGyt/neon-launcher" },
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "main": ["dev.roggyt.neonautohost.NeonAutoHost"]
+  },
+  "depends": {
+    "fabricloader": ">=0.14.0",
+    "fabric-api": "*"
+  }
+}

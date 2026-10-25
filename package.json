@@ -69,6 +69,15 @@
         "repo": "neon-launcher",
         "releaseType": "release"
       }
+    ],
+    "extraResources": [
+      {
+        "from": "resources",
+        "to": ".",
+        "filter": [
+          "neon-autohost.jar"
+        ]
+      }
     ]
   }
 }

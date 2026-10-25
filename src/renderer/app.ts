@@ -17,6 +17,7 @@ const state = {
   contentTab: { mod: 'installed', shader: 'browse' } as Record<ContentKind, 'installed' | 'browse'>,
   contentQuery: { mod: '', shader: '' } as Record<ContentKind, string>,
   update: { status: 'idle' } as UpdateState,
+  cloudStatus: null as string | null,
 };
 
 const main = () => $('#view');
@@ -137,10 +138,10 @@ function selectedProfile(): Profile | undefined {
 function progressBar(): HTMLElement {
   const p = state.progress;
   const ratio = p ? (p.ratio ?? (p.total > 0 ? p.done / p.total : 0)) : 0;
-  const bar = h('div.progress#progress', { class: p ? 'active' : '' },
+  const bar = h('div.progress#progress', { class: p || state.cloudStatus ? 'active' : '' },
     h('div.progress-track', {}, h('div.progress-fill', { style: `width:${Math.round(ratio * 100)}%` })),
     h('div.progress-label', {},
-      h('span', {}, p ? p.stage : state.launch.running ? 'Игра запущена' : 'Готово к запуску'),
+      h('span', {}, p ? p.stage : state.cloudStatus ?? (state.launch.running ? 'Игра запущена' : 'Готово к запуску')),
       h('span.mono', {}, p && p.total > 1 ? `${p.done} / ${p.total}` : ''),
     ),
   );
@@ -160,8 +161,13 @@ function playButton(): HTMLElement {
     return h('button.play-btn.running#play-btn', { onclick: () => guard(() => api.killGame()) },
       icon('stop', 22), h('span', {}, 'Закрыть игру'));
   }
+  if (state.launch.cloud) {
+    // облачная сессия: ждём хоста или сохраняем мир
+    return h('button.play-btn.cloud-wait#play-btn', { onclick: () => guard(() => api.killGame()), title: 'Отменить' },
+      icon('cloud', 22), h('span', {}, 'Облако…'));
+  }
   return h('button.play-btn#play-btn', { disabled: state.busy || !p, onclick: () => p && launch(p.id) },
-    icon('play', 24), h('span', {}, state.busy ? 'Загрузка…' : 'Играть'));
+    icon(p?.cloud ? 'cloud' : 'play', 24), h('span', {}, state.busy ? 'Загрузка…' : 'Играть'));
 }
 
 async function launch(profileId: string) {
@@ -249,7 +255,8 @@ function viewHome(): HTMLElement {
           h('span.badge', {}, icon('cube', 14), p.mcVersion),
           h(`span.badge.loader-${p.loader}`, {}, loaderLabel(p.loader), p.loaderVersion ? ` ${p.loaderVersion.replace(`${p.mcVersion}-`, '')}` : ''),
           h('span.badge', {}, `${(p.ramMb / 1024).toFixed(1).replace('.0', '')} ГБ RAM`),
-          p.autoJoin && p.serverAddress ? h('span.badge.server', { title: '«Играть» сразу заходит на сервер' }, icon('users', 14), p.serverName || p.serverAddress) : null,
+          p.cloud ? h('span.badge.cloud', { title: 'Мир хранится на Яндекс Диске' }, icon('cloud', 14), `Облачный мир «${p.cloud.worldName}»`) : null,
+          p.autoJoin && p.serverAddress && !p.cloud ? h('span.badge.server', { title: '«Играть» сразу заходит на сервер' }, icon('users', 14), p.serverName || p.serverAddress) : null,
         ),
         h('div.hero-actions', {},
           playButton(),
@@ -722,10 +729,10 @@ function shaderCard(profile: Profile, hit: ModrinthHit, installed: Set<string>):
 
 // ======================= С ДРУЗЬЯМИ =======================
 
-type FriendsTab = 'world' | 'server' | 'share';
+type FriendsTab = 'world' | 'cloud' | 'server' | 'share';
 
 function openFriends(p: Profile, startTab?: FriendsTab) {
-  let tab: FriendsTab = startTab ?? (p.serverAddress ? 'server' : 'world');
+  let tab: FriendsTab = startTab ?? (p.cloud ? 'cloud' : p.serverAddress ? 'server' : 'world');
   const body = h('div.friends');
   const m = modal('Играть с друзьями', body, [h('button.btn.ghost', { onclick: () => m.close() }, 'Закрыть')]);
 
@@ -734,10 +741,11 @@ function openFriends(p: Profile, startTab?: FriendsTab) {
   const draw = () => {
     clear(body);
     const tabs = h('div.segmented.friends-tabs', {},
-      ...([['world', 'Мой мир'], ['server', 'Сервер 24/7'], ['share', 'Поделиться сборкой']] as [FriendsTab, string][]).map(([t, label]) =>
+      ...([['world', 'Мой мир'], ['cloud', 'Облачный мир'], ['server', 'Сервер'], ['share', 'Поделиться']] as [FriendsTab, string][]).map(([t, label]) =>
         h(`button.seg${tab === t ? '.active' : ''}`, { type: 'button', onclick: () => { tab = t; draw(); } }, label)));
     body.append(tabs);
     if (tab === 'world') body.append(worldTab());
+    else if (tab === 'cloud') body.append(cloudTab());
     else if (tab === 'server') body.append(serverTab());
     else body.append(shareTab());
   };
@@ -784,6 +792,121 @@ function openFriends(p: Profile, startTab?: FriendsTab) {
       ),
       h('p.muted.small', {}, 'Пока ты не в игре, мир закрыт. Чтобы друзья играли без тебя — вкладка «Сервер 24/7».'),
     );
+    return box;
+  };
+
+
+  // --- облачный мир на Яндекс Диске ---
+  const cloudTab = () => {
+    const box = h('div.friends-pane');
+    const intro = h('p.muted', {}, 'Мир хранится в облаке. Кто первый нажал «Играть» — тот хост, остальные подключаются к нему сами. Хост вышел — хостом становится следующий.');
+    box.append(intro);
+
+    if (p.cloud) {
+      const who = h('div.cloud-who.muted', {}, 'Проверяю, кто сейчас играет…');
+      guard(() => api.cloudWho(p.id)).then(w => {
+        who.textContent = w ? (w.state === 'open' ? `Сейчас играет ${w.host} — нажмёшь «Играть» и попадёшь к нему` : `${w.host} ${w.state === 'saving' ? 'сохраняет мир' : 'открывает мир'}…`) : 'Сейчас никто не играет — нажмёшь «Играть» и станешь хостом';
+      });
+      box.append(
+        h('div.cloud-card', {}, icon('cloud', 28), h('div', {},
+          h('div.setting-label', {}, `«${p.cloud.worldName}»`),
+          h('div.muted.small', {}, `Облако ${p.cloud.owner} · Яндекс Диск`))),
+        who,
+        steps('Скинь друзьям код со вкладки «Поделиться».', 'Друг: «Профили» → «Импорт по коду».', 'Все просто жмут «Играть».'),
+        h('p.muted.small', {}, 'Если у хоста выключится компьютер, потеряется максимум 5 минут игры — мир автоматически сохраняется в облако.'),
+        h('div.row', {},
+          h('button.btn.primary', { onclick: () => { tab = 'share'; draw(); } }, icon('users', 16), 'Пригласить друзей'),
+          h('button.btn.ghost.sm', {
+            onclick: async () => {
+              if (!await confirmDialog('Отключить облако?', 'Профиль снова станет обычным, мир останется у тебя. В облаке он не удалится.', 'Отключить')) return;
+              await guard(() => api.cloudDetach(p.id));
+              state.profiles = await api.listProfiles();
+              Object.assign(p, state.profiles.find(x => x.id === p.id));
+              delete p.cloud;
+              render(); draw();
+            },
+          }, 'Отключить облако'),
+        ),
+      );
+      return box;
+    }
+
+    const versionOk = /^1\.(\d+)/.test(p.mcVersion) ? Number(/^1\.(\d+)/.exec(p.mcVersion)![1]) >= 20 : /^\d{2}\./.test(p.mcVersion);
+    if (p.loader !== 'fabric' || !versionOk) {
+      box.append(
+        h('p', {}, 'Облачный мир работает на Fabric и версиях 1.20 и новее.'),
+        h('button.btn.primary', { onclick: () => { m.close(); editProfile(p, { loader: 'fabric' }); } }, 'Изменить профиль'),
+      );
+      return box;
+    }
+
+    const body2 = h('div.friends-pane', {}, h('div.loading', {}, 'Загрузка…'));
+    box.append(body2);
+    (async () => {
+      const available = await guard(() => api.cloudAvailable());
+      clear(body2);
+      if (!available) {
+        body2.append(h('p.muted', {}, 'Облачные миры появятся в следующем обновлении лаунчера.'));
+        return;
+      }
+      if (!state.settings.yandex?.token) {
+        const login = h('button.btn.primary', {}, icon('cloud', 16), 'Войти через Яндекс') as HTMLButtonElement;
+        login.addEventListener('click', async () => {
+          login.disabled = true;
+          const ok = await guard(() => api.cloudLogin());
+          login.disabled = false;
+          if (ok) { state.settings = await api.getSettings(); toast('Яндекс Диск подключён', 'ok'); draw(); }
+        });
+        body2.append(
+          h('p', {}, 'Мир будет храниться на твоём Яндекс Диске (бесплатно, 5 ГБ хватит надолго).'),
+          h('p.muted.small', {}, 'Лаунчер получит доступ только к своей папке на Диске, твои файлы он не видит.'),
+          h('div.row', {}, login),
+        );
+        return;
+      }
+      const worlds = (await guard(() => api.cloudWorlds(p.id))) ?? [];
+      if (!worlds.length) {
+        body2.append(
+          h('p', {}, 'В этом профиле пока нет миров.'),
+          steps('Нажми «Играть» и создай мир в одиночной игре.', 'Выйди из игры.', 'Вернись сюда и загрузи мир в облако.'),
+        );
+        return;
+      }
+      let chosen = worlds[0].folder;
+      const list = h('div.world-list', {}, ...worlds.map(w => {
+        const item = h(`button.world-item${w.folder === chosen ? '.on' : ''}`, { type: 'button' },
+          h('span.world-name', {}, w.folder), h('span.muted.small', {}, fmtAgo(w.lastPlayed)));
+        item.addEventListener('click', () => {
+          chosen = w.folder;
+          list.querySelectorAll('.world-item').forEach(el => el.classList.toggle('on', el === item));
+        });
+        return item;
+      }));
+      const up = h('button.btn.primary', {}, icon('cloud', 16), 'Загрузить мир в облако') as HTMLButtonElement;
+      const status = h('span.muted.small');
+      const off = api.onProgress(pr => { if (pr) status.textContent = `${pr.stage}: ${pr.done}/${pr.total}`; });
+      up.addEventListener('click', async () => {
+        up.disabled = true;
+        const res = await guard(() => api.cloudCreate(p.id, chosen));
+        up.disabled = false;
+        status.textContent = '';
+        if (!res) return;
+        off();
+        state.profiles = await api.listProfiles();
+        Object.assign(p, state.profiles.find(x => x.id === p.id));
+        toast(`Мир «${chosen}» теперь в облаке — пригласи друзей`, 'ok');
+        render();
+        tab = 'share';
+        draw();
+      });
+      body2.append(
+        h('div.field', {}, h('label', {}, 'Какой мир сделать общим'), list),
+        h('div.row', {}, up, status),
+        h('div.row', {}, h('span.muted.small', {}, 'Яндекс подключён'), h('button.link.small', {
+          onclick: async () => { await guard(() => api.cloudLogout()); state.settings = await api.getSettings(); draw(); },
+        }, 'выйти')),
+      );
+    })();
     return box;
   };
 
@@ -844,11 +967,12 @@ function openFriends(p: Profile, startTab?: FriendsTab) {
         : '';
     });
     return h('div.friends-pane', {},
-      h('p.muted', {}, 'В коде: версия, модлоадер, все моды и шейдеры точных версий' + (p.serverAddress ? ' и адрес сервера.' : '.')),
+      h('p.muted', {}, 'В коде: версия, модлоадер, все моды и шейдеры точных версий' + (p.cloud ? ' и доступ к облачному миру.' : p.serverAddress ? ' и адрес сервера.' : '.')),
+      p.cloud ? h('p.warn-note.small', {}, 'Код даёт доступ к облачному миру — отправляй только друзьям.') : null,
       out,
       info,
       h('div.row', {}, copy),
-      steps('Друг ставит Neon Launcher.', '«Профили» → «Импорт по коду» → вставляет код.', `Жмёт «Играть»${p.autoJoin && p.serverAddress ? ' — и сразу попадает на сервер' : ''}.`),
+      steps('Друг ставит Neon Launcher.', '«Профили» → «Импорт по коду» → вставляет код.', `Жмёт «Играть»${p.cloud ? ' — и попадает в общий мир' : p.autoJoin && p.serverAddress ? ' — и сразу попадает на сервер' : ''}.`),
     );
   };
 
@@ -1082,6 +1206,12 @@ async function boot() {
     cancelAnimationFrame(progressRaf);
     progressRaf = requestAnimationFrame(updateProgress);
   });
+  api.onCloudStatus(text => {
+    state.cloudStatus = text;
+    cancelAnimationFrame(progressRaf);
+    progressRaf = requestAnimationFrame(updateProgress);
+  });
+  api.onCloudError(text => toast(text, 'error', 10000));
   api.onLaunchState(s => {
     state.launch = s;
     renderShell();

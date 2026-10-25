@@ -171,6 +171,7 @@ export async function exportContent(p: Profile, kind: ContentKind): Promise<{ li
   let activeShader: string | undefined;
   for (const it of items) {
     if (kind === 'mod' && !it.enabled) continue;
+    if (it.fileName === 'neon-autohost.jar') continue; // помощник лаунчера, ставится сам
     const m = meta[it.fileName];
     if (!m) { skipped++; continue; } // поставлен вручную, не с Modrinth
     list.push(m.versionId ? [m.projectId, m.versionId] : [m.projectId]);

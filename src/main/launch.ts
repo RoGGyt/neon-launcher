@@ -187,13 +187,28 @@ async function resolveAccount(hooks: LaunchHooks): Promise<Account> {
   return s.account;
 }
 
-export function buildCommand(profile: Profile, prep: Prepared, account: Account, authlib: string | null): string[] {
+export interface LaunchOptions {
+  /** сразу открыть одиночный мир (имя папки в saves) — для хоста облачного мира */
+  quickPlaySingleplayer?: string;
+  /** сразу зайти на этот адрес — для гостя облачного мира */
+  quickPlayMultiplayer?: string;
+  extraJvm?: string[];
+  /** каждая строка лога игры */
+  onLine?: (line: string) => void;
+  /** не закрывать лаунчер после запуска (облачному миру он нужен для синхронизации) */
+  keepLauncher?: boolean;
+}
+
+export function buildCommand(profile: Profile, prep: Prepared, account: Account, authlib: string | null, opts: LaunchOptions = {}): string[] {
   const v = prep.version;
   const gameDir = paths.profileDir(profile.id);
-  const join = profile.autoJoin && profile.serverAddress ? parseAddress(profile.serverAddress) : null;
+  const join = opts.quickPlayMultiplayer
+    ? parseAddress(opts.quickPlayMultiplayer)
+    : !opts.quickPlaySingleplayer && profile.autoJoin && profile.serverAddress ? parseAddress(profile.serverAddress) : null;
   const features: Features = {
     has_custom_resolution: Boolean(profile.width && profile.height),
     is_quick_play_multiplayer: Boolean(join),
+    is_quick_play_singleplayer: Boolean(opts.quickPlaySingleplayer),
   };
   const uuidNoDash = account.uuid.replace(/-/g, '');
   const token = account.type === 'ely' ? account.accessToken : '0';
@@ -221,6 +236,7 @@ export function buildCommand(profile: Profile, prep: Prepared, account: Account,
     resolution_width: String(profile.width ?? 854),
     resolution_height: String(profile.height ?? 480),
     quick_play_multiplayer: join ? `${join.host}:${join.port}` : '',
+    quick_play_singleplayer: opts.quickPlaySingleplayer ?? '',
   };
 
   const jvm: string[] = [
@@ -242,6 +258,7 @@ export function buildCommand(profile: Profile, prep: Prepared, account: Account,
   );
   if (authlib) jvm.push(`-javaagent:${authlib}=ely.by`);
   jvm.push(...splitArgs(profile.jvmArgs));
+  jvm.push(...(opts.extraJvm ?? []));
   if (prep.loggingArg) jvm.push(prep.loggingArg);
 
   const versionJvm = processArgs(v.arguments?.jvm, vars, features);
@@ -260,6 +277,9 @@ export function buildCommand(profile: Profile, prep: Prepared, account: Account,
   // сразу на сервер: в 1.20+ через quickPlay, в старых версиях через --server/--port
   if (join && !game.includes('--quickPlayMultiplayer')) {
     game.push('--server', join.host, '--port', String(join.port));
+  }
+  if (opts.quickPlaySingleplayer && !game.includes('--quickPlaySingleplayer')) {
+    throw new Error('Эта версия игры не умеет сразу открывать мир — облачные миры работают на 1.20 и новее');
   }
   return [...jvm, v.mainClass, ...game];
 }
@@ -282,6 +302,7 @@ export async function launchProfile(
   hooks: LaunchHooks,
   onStart: () => void,
   onExit: (code: number | null) => void,
+  opts: LaunchOptions = {},
 ): Promise<void> {
   if (game) throw new Error('Игра уже запущена');
   const account = await resolveAccount(hooks);
@@ -289,7 +310,7 @@ export async function launchProfile(
 
   const prep = await prepare(profile, hooks);
   const authlib = account.type === 'ely' ? await ensureAuthlibInjector() : null;
-  const args = buildCommand(profile, prep, account, authlib);
+  const args = buildCommand(profile, prep, account, authlib, opts);
 
   // сервер из профиля появляется в «Сетевой игре»
   if (profile.serverAddress?.trim()) {
@@ -304,7 +325,7 @@ export async function launchProfile(
   });
   hooks.log(`${prep.java} ${shown.join(' ')}`);
 
-  const afterLaunch = getSettings().afterLaunch;
+  const afterLaunch = opts.keepLauncher && getSettings().afterLaunch === 'close' ? 'hide' : getSettings().afterLaunch;
   const child = spawn(prep.java, args, {
     cwd: paths.profileDir(profile.id),
     windowsHide: true,
@@ -334,12 +355,19 @@ export async function launchProfile(
     else exitCode = code;
   });
 
-  const onData = (level: LogEvent['level']) => (d: Buffer) => {
-    for (const line of d.toString().split(/\r?\n/)) {
-      if (!line) continue;
-      const lvl = /\bERROR\b|Exception|FATAL/.test(line) ? 'error' : /\bWARN\b/.test(line) ? 'warn' : level;
-      hooks.log(line, lvl);
-    }
+  // куски вывода могут рвать строку посередине — собираем целые строки
+  const onData = (level: LogEvent['level']) => {
+    let rest = '';
+    return (d: Buffer) => {
+      const parts = (rest + d.toString()).split(/\r?\n/);
+      rest = parts.pop() ?? '';
+      for (const line of parts) {
+        if (!line) continue;
+        const lvl = /\bERROR\b|Exception|FATAL/.test(line) ? 'error' : /\bWARN\b/.test(line) ? 'warn' : level;
+        hooks.log(line, lvl);
+        opts.onLine?.(line);
+      }
+    };
   };
   child.stdout?.on('data', onData('game'));
   child.stderr?.on('data', onData('game'));
