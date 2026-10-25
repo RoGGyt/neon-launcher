@@ -338,7 +338,7 @@ function filteredVersions(showSnap: boolean, showOld: boolean): McVersion[] {
     v.type === 'release' || (showSnap && v.type === 'snapshot') || (showOld && (v.type === 'old_beta' || v.type === 'old_alpha')));
 }
 
-async function editProfile(existing?: Profile) {
+async function editProfile(existing?: Profile, preset: { loader?: Loader } = {}) {
   await ensureVersions();
   if (!state.versions.length) return;
 
@@ -346,7 +346,7 @@ async function editProfile(existing?: Profile) {
   const draft = {
     name: existing?.name ?? '',
     mcVersion: existing?.mcVersion ?? latest,
-    loader: (existing?.loader ?? 'vanilla') as Loader,
+    loader: (preset.loader ?? existing?.loader ?? 'vanilla') as Loader,
     loaderVersion: existing?.loaderVersion,
     ramMb: existing?.ramMb ?? state.settings.defaultRamMb,
     javaPath: existing?.javaPath ?? '',
@@ -501,8 +501,18 @@ function viewMods(): HTMLElement {
     return h('div', {},
       h('div.page-head', {}, h('div', {}, h('h1', {}, 'Моды'), h('p.muted', {}, 'Каталог Modrinth: тысячи модов для Fabric и Forge.'))),
       h('div.empty-state', {}, icon('puzzle', 40),
-        h('p', {}, 'Моды ставятся в профили с Fabric или Forge. Создай такой профиль.'),
-        h('button.btn.primary', { onclick: () => editProfile() }, icon('plus'), 'Новый профиль')),
+        h('p', {}, 'Моды работают через модлоадер — Fabric или Forge. В ванильной игре их нет.'),
+        h('div.row.wrap-center', {},
+          h('button.btn.primary', { onclick: () => editProfile(undefined, { loader: 'fabric' }) }, icon('plus'), 'Создать Fabric-профиль'),
+          h('button.btn.ghost', { onclick: () => editProfile(undefined, { loader: 'forge' }) }, 'Forge-профиль'),
+        ),
+        state.profiles.length > 0
+          ? h('div.convert', {},
+              h('p.muted.small', {}, 'Или добавь Fabric в существующий профиль — миры и настройки останутся:'),
+              h('div.convert-list', {}, ...state.profiles.map(p =>
+                h('button.chip', { onclick: () => editProfile(p, { loader: 'fabric' }) }, `${p.name} · ${p.mcVersion}`))),
+            )
+          : null),
     );
   }
   if (!moddable.some(p => p.id === state.modsProfileId)) {

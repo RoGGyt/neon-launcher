@@ -312,6 +312,9 @@ details.advanced .field { margin-bottom: 12px; }
 .empty-state svg { color: var(--dim); }
 .empty-state p { margin: 0; }
 .empty-state.small { padding: 30px; border: 0; }
+.wrap-center { justify-content: center; flex-wrap: wrap; }
+.convert { margin-top: 10px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.convert-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
 .loading { padding: 30px; text-align: center; color: var(--muted); }
 
 /* ---------- моды ---------- */
