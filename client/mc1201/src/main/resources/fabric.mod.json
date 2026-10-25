@@ -6,6 +6,16 @@
   "description": "Главное меню Neon Launcher",
   "license": "MIT",
   "environment": "client",
-  "entrypoints": { "client": ["dev.neon.client.NeonClient"] },
-  "depends": { "fabricloader": ">=0.14.21", "minecraft": "${mc}" }
+  "entrypoints": {
+    "client": [
+      "dev.neon.client.NeonClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.14.21",
+    "minecraft": "${mc}"
+  },
+  "mixins": [
+    "neonclient.mixins.json"
+  ]
 }
