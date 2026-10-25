@@ -10,7 +10,7 @@ import { USER_AGENT } from './net';
  * ClientID приложения на oauth.yandex.ru (платформа «Веб-сервисы»,
  * доступ «Яндекс Диск REST API → папка приложения»). Не секрет.
  */
-export const YANDEX_CLIENT_ID = '';
+export const YANDEX_CLIENT_ID = '89c2ccced96b48f796267555eb50a9e2';
 export const YANDEX_REDIRECT = 'https://oauth.yandex.ru/verification_code';
 const API = 'https://cloud-api.yandex.net/v1/disk';
 
