@@ -272,7 +272,26 @@ export async function launchProfile(
   });
   game = child;
   gameProfile = profile.id;
-  await updateProfile(profile.id, { lastPlayed: Date.now() });
+
+  // подписываемся сразу: событие 'spawn' приходит на следующем тике, до любого await
+  const spawned = new Promise<void>((resolve, reject) => {
+    child.once('spawn', () => resolve());
+    child.once('error', e => {
+      game = null;
+      gameProfile = null;
+      reject(new Error(`Не удалось запустить Java: ${e.message}`));
+    });
+  });
+  let started = false;
+  let exitCode: number | null | undefined;
+  child.once('exit', code => {
+    game = null;
+    gameProfile = null;
+    if (code !== 0 && code !== null) hooks.log(`Игра завершилась с кодом ${code}`, 'error');
+    else hooks.log('Игра закрыта');
+    if (started) onExit(code);
+    else exitCode = code;
+  });
 
   const onData = (level: LogEvent['level']) => (d: Buffer) => {
     for (const line of d.toString().split(/\r?\n/)) {
@@ -284,23 +303,13 @@ export async function launchProfile(
   child.stdout?.on('data', onData('game'));
   child.stderr?.on('data', onData('game'));
 
-  await new Promise<void>((resolve, reject) => {
-    child.once('spawn', () => resolve());
-    child.once('error', e => {
-      game = null;
-      gameProfile = null;
-      reject(new Error(`Не удалось запустить Java: ${e.message}`));
-    });
-  });
+  await spawned;
+  await updateProfile(profile.id, { lastPlayed: Date.now() }).catch(() => undefined);
 
   hooks.progress(null);
+  started = true;
   onStart();
-  child.once('exit', code => {
-    game = null;
-    gameProfile = null;
-    if (code !== 0 && code !== null) hooks.log(`Игра завершилась с кодом ${code}`, 'error');
-    else hooks.log('Игра закрыта');
-    onExit(code);
-  });
+  // игра успела закрыться, пока мы обновляли профиль
+  if (exitCode !== undefined) onExit(exitCode);
   if (afterLaunch === 'close') child.unref();
 }
