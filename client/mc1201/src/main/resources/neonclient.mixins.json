@@ -9,6 +9,7 @@
     "ScreenMixin",
     "FontMixin",
     "TrueTypeGlyphMixin",
+    "TrueTypeProviderMixin",
     "GuiGraphicsMixin",
     "AbstractWidgetMixin",
     "AbstractButtonMixin",
