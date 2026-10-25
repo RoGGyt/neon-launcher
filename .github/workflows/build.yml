@@ -1,0 +1,41 @@
+name: Сборка лаунчера
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Установка зависимостей
+        run: npm install
+
+      - name: Сборка exe
+        run: npm run build && npx electron-builder --win --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Публикация в Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Neon Launcher — сборка ${{ github.run_number }}
+          make_latest: true
+          body: |
+            **NeonLauncher-Setup-*.exe** — установщик (ярлык на рабочем столе и в Пуске).
+            **NeonLauncher-portable-*.exe** — запускается сразу, без установки.
+
+            Если Windows покажет «Windows защитила ваш компьютер»: «Подробнее» → «Выполнить в любом случае».
+          files: |
+            release/*.exe

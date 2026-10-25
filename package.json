@@ -1,0 +1,58 @@
+{
+  "name": "neon-launcher",
+  "productName": "Neon Launcher",
+  "version": "1.0.0",
+  "description": "Неоновый Minecraft-лаунчер: любые версии, Fabric/Forge, моды с Modrinth, Ely.by",
+  "main": "dist/main/main.js",
+  "author": "RoGGyt",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.renderer.json && node scripts/copy-static.js",
+    "start": "npm run build && electron .",
+    "dist": "npm run build && electron-builder --win",
+    "dist:linux": "npm run build && electron-builder --linux",
+    "dist:mac": "npm run build && electron-builder --mac"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.0",
+    "typescript": "^5.6.0"
+  },
+  "build": {
+    "appId": "dev.roggyt.neonlauncher",
+    "productName": "Neon Launcher",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "icon": "build/icon.png",
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "NeonLauncher-Setup-${version}.exe",
+      "shortcutName": "Neon Launcher"
+    },
+    "portable": {
+      "artifactName": "NeonLauncher-portable-${version}.exe"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Game"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.games"
+    }
+  }
+}
