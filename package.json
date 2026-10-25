@@ -48,7 +48,8 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "artifactName": "NeonLauncher-Setup-${version}.exe",
-      "shortcutName": "Neon Launcher"
+      "shortcutName": "Neon Launcher",
+      "deleteAppDataOnUninstall": true
     },
     "portable": {
       "artifactName": "NeonLauncher-portable-${version}.exe"

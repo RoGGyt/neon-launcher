@@ -62,12 +62,16 @@ export interface LogEvent {
   level: 'info' | 'warn' | 'error' | 'game';
 }
 
+export type ContentKind = 'mod' | 'shader';
+
 export interface ModrinthHit {
   project_id: string;
   slug: string;
   title: string;
   description: string;
   icon_url: string | null;
+  featured_gallery?: string | null;
+  gallery?: string[];
   downloads: number;
   author: string;
   categories: string[];
@@ -128,12 +132,14 @@ export interface LauncherApi {
   killGame(): Promise<void>;
   getLaunchState(): Promise<LaunchState>;
 
-  searchMods(profileId: string, query: string, offset: number): Promise<{ hits: ModrinthHit[]; total: number }>;
-  installMod(profileId: string, projectId: string): Promise<string[]>;
-  listMods(profileId: string): Promise<InstalledMod[]>;
-  toggleMod(profileId: string, fileName: string): Promise<void>;
-  deleteMod(profileId: string, fileName: string): Promise<void>;
-  openModsFolder(profileId: string): Promise<void>;
+  /** моды и шейдеры с Modrinth */
+  searchContent(profileId: string, kind: ContentKind, query: string, offset: number): Promise<{ hits: ModrinthHit[]; total: number }>;
+  installContent(profileId: string, kind: ContentKind, projectId: string): Promise<string[]>;
+  listContent(profileId: string, kind: ContentKind): Promise<InstalledMod[]>;
+  /** мод: вкл/выкл; шейдер: сделать активным / выключить */
+  toggleContent(profileId: string, kind: ContentKind, fileName: string): Promise<void>;
+  deleteContent(profileId: string, kind: ContentKind, fileName: string): Promise<void>;
+  openContentFolder(profileId: string, kind: ContentKind): Promise<void>;
 
   getUpdateState(): Promise<UpdateState>;
   checkForUpdates(): Promise<void>;

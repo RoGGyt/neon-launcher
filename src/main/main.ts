@@ -10,7 +10,7 @@ import { offlineAccount, elyLogin, elyLogout } from './auth';
 import { launchProfile, killGame, isRunning } from './launch';
 import * as mods from './mods';
 import { initUpdater, getUpdateState, checkForUpdates, installUpdate, isPortable, RELEASES_URL } from './updater';
-import type { Loader, LogEvent, ProgressEvent } from '../shared/types';
+import type { ContentKind, Loader, LogEvent, ProgressEvent } from '../shared/types';
 
 let win: BrowserWindow | null = null;
 
@@ -153,13 +153,14 @@ function registerIpc() {
   handle('game:kill', () => killGame());
   handle('game:state', () => isRunning());
 
-  handle('mods:search', (profileId: string, q: string, offset: number) => mods.searchMods(store.getProfile(profileId), q, offset));
-  handle('mods:install', (profileId: string, projectId: string) => mods.installMod(store.getProfile(profileId), projectId));
-  handle('mods:list', (profileId: string) => mods.listMods(store.getProfile(profileId)));
-  handle('mods:toggle', (profileId: string, file: string) => mods.toggleMod(store.getProfile(profileId), file));
-  handle('mods:delete', (profileId: string, file: string) => mods.deleteMod(store.getProfile(profileId), file));
-  handle('mods:open', async (profileId: string) => {
-    const dir = mods.modsFolder(store.getProfile(profileId));
+  const K = (k: ContentKind): ContentKind => (k === 'shader' ? 'shader' : 'mod');
+  handle('content:search', (id: string, k: ContentKind, q: string, offset: number) => mods.searchContent(store.getProfile(id), K(k), q, offset));
+  handle('content:install', (id: string, k: ContentKind, projectId: string) => mods.installContent(store.getProfile(id), K(k), projectId));
+  handle('content:list', (id: string, k: ContentKind) => mods.listContent(store.getProfile(id), K(k)));
+  handle('content:toggle', (id: string, k: ContentKind, file: string) => mods.toggleContent(store.getProfile(id), K(k), file));
+  handle('content:delete', (id: string, k: ContentKind, file: string) => mods.deleteContent(store.getProfile(id), K(k), file));
+  handle('content:open', async (id: string, k: ContentKind) => {
+    const dir = mods.contentFolder(store.getProfile(id), K(k));
     await fsp.mkdir(dir, { recursive: true });
     await shell.openPath(dir);
   });

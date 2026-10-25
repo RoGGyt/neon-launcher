@@ -36,12 +36,12 @@ const api: LauncherApi = {
   killGame: () => call('game:kill'),
   getLaunchState: () => call('game:state'),
 
-  searchMods: (profileId, query, offset) => call('mods:search', profileId, query, offset),
-  installMod: (profileId, projectId) => call('mods:install', profileId, projectId),
-  listMods: profileId => call('mods:list', profileId),
-  toggleMod: (profileId, file) => call('mods:toggle', profileId, file),
-  deleteMod: (profileId, file) => call('mods:delete', profileId, file),
-  openModsFolder: profileId => call('mods:open', profileId),
+  searchContent: (profileId, kind, query, offset) => call('content:search', profileId, kind, query, offset),
+  installContent: (profileId, kind, projectId) => call('content:install', profileId, kind, projectId),
+  listContent: (profileId, kind) => call('content:list', profileId, kind),
+  toggleContent: (profileId, kind, file) => call('content:toggle', profileId, kind, file),
+  deleteContent: (profileId, kind, file) => call('content:delete', profileId, kind, file),
+  openContentFolder: (profileId, kind) => call('content:open', profileId, kind),
 
   getUpdateState: () => call('update:state'),
   checkForUpdates: () => call('update:check'),

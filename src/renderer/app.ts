@@ -1,7 +1,7 @@
 import { api, h, $, clear, icon, toast, guard, modal, confirmDialog, fmtNum, fmtSize, fmtAgo, loaderLabel } from './dom.js';
-import type { Account, Loader, McVersion, Profile, Settings, SystemInfo, LaunchState, LogEvent, ProgressEvent, InstalledMod, ModrinthHit, UpdateState } from '../shared/types';
+import type { Account, Loader, McVersion, Profile, Settings, SystemInfo, LaunchState, LogEvent, ProgressEvent, InstalledMod, ModrinthHit, UpdateState, ContentKind } from '../shared/types';
 
-type View = 'home' | 'profiles' | 'mods' | 'settings' | 'console';
+type View = 'home' | 'profiles' | 'mods' | 'shaders' | 'settings' | 'console';
 
 const state = {
   view: 'home' as View,
@@ -13,9 +13,9 @@ const state = {
   progress: null as ProgressEvent | null,
   busy: false,
   logs: [] as LogEvent[],
-  modsProfileId: null as string | null,
-  modsTab: 'installed' as 'installed' | 'browse',
-  modsQuery: '',
+  contentProfileId: null as string | null,
+  contentTab: { mod: 'installed', shader: 'browse' } as Record<ContentKind, 'installed' | 'browse'>,
+  contentQuery: { mod: '', shader: '' } as Record<ContentKind, string>,
   update: { status: 'idle' } as UpdateState,
 };
 
@@ -47,6 +47,7 @@ function renderShell() {
     ['home', 'Играть', 'play'],
     ['profiles', 'Профили', 'layers'],
     ['mods', 'Моды', 'puzzle'],
+    ['shaders', 'Шейдеры', 'sun'],
     ['settings', 'Настройки', 'settings'],
     ['console', 'Консоль', 'terminal'],
   ];
@@ -119,7 +120,8 @@ function render() {
   v.scrollTop = 0;
   const page = state.view === 'home' ? viewHome()
     : state.view === 'profiles' ? viewProfiles()
-    : state.view === 'mods' ? viewMods()
+    : state.view === 'mods' ? viewContent('mod')
+    : state.view === 'shaders' ? viewContent('shader')
     : state.view === 'settings' ? viewSettings()
     : viewConsole();
   page.classList.add('page');
@@ -312,7 +314,7 @@ function profileCard(p: Profile): HTMLElement {
       }, icon('play', 14), 'Играть'),
       h('button.icon-btn', { title: 'Изменить', onclick: () => editProfile(p) }, icon('edit', 16)),
       h('button.icon-btn', { title: 'Открыть папку', onclick: () => guard(() => api.openProfileFolder(p.id)) }, icon('folder', 16)),
-      p.loader !== 'vanilla' ? h('button.icon-btn', { title: 'Моды', onclick: () => { state.modsProfileId = p.id; go('mods'); } }, icon('puzzle', 16)) : null,
+      p.loader !== 'vanilla' ? h('button.icon-btn', { title: 'Моды', onclick: () => { state.contentProfileId = p.id; go('mods'); } }, icon('puzzle', 16)) : null,
       h('button.icon-btn.danger', { title: 'Удалить', onclick: () => removeProfile(p) }, icon('trash', 16)),
     ),
   );
@@ -493,18 +495,36 @@ async function editProfile(existing?: Profile, preset: { loader?: Loader } = {})
   nameInput.focus();
 }
 
-// ======================= МОДЫ =======================
+// ======================= МОДЫ И ШЕЙДЕРЫ =======================
 
-function viewMods(): HTMLElement {
+const KIND_TEXT = {
+  mod: {
+    title: 'Моды', one: 'мод', many: 'модов', folder: 'Папка mods', iconName: 'puzzle' as const,
+    sub: 'Зависимости (например Fabric API) ставятся автоматически.',
+    empty: 'Модов пока нет.', url: 'mod',
+  },
+  shader: {
+    title: 'Шейдеры', one: 'шейдер', many: 'шейдеров', folder: 'Папка shaderpacks', iconName: 'sun' as const,
+    sub: 'Iris (или Oculus для Forge) и Sodium поставятся сами. Активный шейдер включится при запуске игры.',
+    empty: 'Шейдеров пока нет.', url: 'shader',
+  },
+};
+
+function viewContent(kind: ContentKind): HTMLElement {
+  const T = KIND_TEXT[kind];
   const moddable = state.profiles.filter(p => p.loader !== 'vanilla');
   if (moddable.length === 0) {
     return h('div', {},
-      h('div.page-head', {}, h('div', {}, h('h1', {}, 'Моды'), h('p.muted', {}, 'Каталог Modrinth: тысячи модов для Fabric и Forge.'))),
-      h('div.empty-state', {}, icon('puzzle', 40),
-        h('p', {}, 'Моды работают через модлоадер — Fabric или Forge. В ванильной игре их нет.'),
+      h('div.page-head', {}, h('div', {}, h('h1', {}, T.title), h('p.muted', {}, kind === 'mod'
+        ? 'Каталог Modrinth: тысячи модов для Fabric и Forge.'
+        : 'Каталог шейдеров с Modrinth: Complementary, BSL, Sildur’s и другие.'))),
+      h('div.empty-state', {}, icon(T.iconName, 40),
+        h('p', {}, kind === 'mod'
+          ? 'Моды работают через модлоадер — Fabric или Forge. В ванильной игре их нет.'
+          : 'Шейдеры работают через мод Iris, а ему нужен Fabric. В ванильной игре шейдеров нет.'),
         h('div.row.wrap-center', {},
           h('button.btn.primary', { onclick: () => editProfile(undefined, { loader: 'fabric' }) }, icon('plus'), 'Создать Fabric-профиль'),
-          h('button.btn.ghost', { onclick: () => editProfile(undefined, { loader: 'forge' }) }, 'Forge-профиль'),
+          kind === 'mod' ? h('button.btn.ghost', { onclick: () => editProfile(undefined, { loader: 'forge' }) }, 'Forge-профиль') : null,
         ),
         state.profiles.length > 0
           ? h('div.convert', {},
@@ -515,78 +535,86 @@ function viewMods(): HTMLElement {
           : null),
     );
   }
-  if (!moddable.some(p => p.id === state.modsProfileId)) {
+  if (!moddable.some(p => p.id === state.contentProfileId)) {
     const sel = selectedProfile();
-    state.modsProfileId = sel && sel.loader !== 'vanilla' ? sel.id : moddable[0].id;
+    state.contentProfileId = sel && sel.loader !== 'vanilla' ? sel.id : moddable[0].id;
   }
-  const profile = moddable.find(p => p.id === state.modsProfileId)!;
+  const profile = moddable.find(p => p.id === state.contentProfileId)!;
+  const tab = state.contentTab[kind];
 
   const profileSelect = h('select.input.compact', {
-    onchange: (e: Event) => { state.modsProfileId = (e.target as HTMLSelectElement).value; render(); },
+    onchange: (e: Event) => { state.contentProfileId = (e.target as HTMLSelectElement).value; render(); },
   }, ...moddable.map(p => h('option', { value: p.id, selected: p.id === profile.id }, `${p.name} — ${loaderLabel(p.loader)} ${p.mcVersion}`))) as HTMLSelectElement;
 
+  const setTab = (t: 'installed' | 'browse') => { state.contentTab[kind] = t; render(); };
   const content = h('div.mods-content');
-  const tabs = h('div.tabs', {},
-    h(`button.tab${state.modsTab === 'installed' ? '.active' : ''}`, { onclick: () => { state.modsTab = 'installed'; render(); } }, 'Установленные'),
-    h(`button.tab${state.modsTab === 'browse' ? '.active' : ''}`, { onclick: () => { state.modsTab = 'browse'; render(); } }, 'Каталог Modrinth'),
-  );
-
-  if (state.modsTab === 'installed') renderInstalledMods(profile, content);
-  else renderBrowseMods(profile, content);
+  if (tab === 'installed') renderInstalled(profile, kind, content);
+  else renderBrowse(profile, kind, content);
 
   return h('div', {},
     h('div.page-head', {},
-      h('div', {}, h('h1', {}, 'Моды'), h('p.muted', {}, 'Зависимости (например Fabric API) ставятся автоматически.')),
-      h('div.row', {}, profileSelect, h('button.icon-btn', { title: 'Папка mods', onclick: () => guard(() => api.openModsFolder(profile.id)) }, icon('folder', 18))),
+      h('div', {}, h('h1', {}, T.title), h('p.muted', {}, T.sub)),
+      h('div.row', {}, profileSelect, h('button.icon-btn', { title: T.folder, onclick: () => guard(() => api.openContentFolder(profile.id, kind)) }, icon('folder', 18))),
     ),
-    tabs,
+    h('div.tabs', {},
+      h(`button.tab${tab === 'installed' ? '.active' : ''}`, { onclick: () => setTab('installed') }, 'Установленные'),
+      h(`button.tab${tab === 'browse' ? '.active' : ''}`, { onclick: () => setTab('browse') }, 'Каталог Modrinth'),
+    ),
     content,
   );
 }
 
-async function renderInstalledMods(profile: Profile, box: HTMLElement) {
+async function renderInstalled(profile: Profile, kind: ContentKind, box: HTMLElement) {
+  const T = KIND_TEXT[kind];
   box.append(h('div.loading', {}, 'Загрузка…'));
-  const mods = await guard(() => api.listMods(profile.id));
+  const items = await guard(() => api.listContent(profile.id, kind));
   clear(box);
-  if (!mods || mods.length === 0) {
-    box.append(h('div.empty-state', {}, icon('puzzle', 36), h('p', {}, 'Модов пока нет.'),
-      h('button.btn.primary', { onclick: () => { state.modsTab = 'browse'; render(); } }, icon('search'), 'Открыть каталог')));
+  if (!items || items.length === 0) {
+    box.append(h('div.empty-state', {}, icon(T.iconName, 36), h('p', {}, T.empty),
+      h('button.btn.primary', { onclick: () => { state.contentTab[kind] = 'browse'; render(); } }, icon('search'), 'Открыть каталог')));
     return;
   }
-  box.append(h('div.list', {}, ...mods.map(mod => installedRow(profile, mod))));
+  if (kind === 'shader' && !items.some(i => i.enabled)) {
+    box.append(h('p.muted.small.hint', {}, 'Сейчас шейдеры выключены — нажми «Включить» у нужного.'));
+  }
+  box.append(h('div.list', {}, ...items.map(item => installedRow(profile, kind, item))));
 }
 
-function modIcon(url: string | null | undefined): HTMLElement {
-  return url ? h('img.mod-icon', { src: url, alt: '', loading: 'lazy' }) : h('div.mod-icon.blank', {}, icon('puzzle', 20));
+function modIcon(url: string | null | undefined, kind: ContentKind = 'mod'): HTMLElement {
+  return url ? h('img.mod-icon', { src: url, alt: '', loading: 'lazy' }) : h('div.mod-icon.blank', {}, icon(KIND_TEXT[kind].iconName, 20));
 }
 
-function installedRow(profile: Profile, mod: InstalledMod): HTMLElement {
-  const toggle = h(`button.switch${mod.enabled ? '.on' : ''}`, {
-    title: mod.enabled ? 'Выключить' : 'Включить',
-    onclick: async () => {
-      await guard(() => api.toggleMod(profile.id, mod.fileName));
-      render();
-    },
-  }, h('span.knob'));
-  return h(`div.row-item${mod.enabled ? '' : '.disabled'}`, {},
-    modIcon(mod.iconUrl),
+function installedRow(profile: Profile, kind: ContentKind, item: InstalledMod): HTMLElement {
+  const toggleAction = async () => {
+    await guard(() => api.toggleContent(profile.id, kind, item.fileName));
+    render();
+  };
+  const control = kind === 'shader'
+    ? (item.enabled
+        ? h('button.btn.sm.active-shader', { onclick: toggleAction, title: 'Выключить шейдеры' }, icon('check', 14), 'Активен')
+        : h('button.btn.ghost.sm', { onclick: toggleAction }, 'Включить'))
+    : h(`button.switch${item.enabled ? '.on' : ''}`, { title: item.enabled ? 'Выключить' : 'Включить', onclick: toggleAction }, h('span.knob'));
+  const dim = kind === 'mod' && !item.enabled;
+  return h(`div.row-item${dim ? '.disabled' : ''}${kind === 'shader' && item.enabled ? '.glow' : ''}`, {},
+    modIcon(item.iconUrl, kind),
     h('div.row-main', {},
-      h('div.row-title', {}, mod.title),
-      h('div.row-sub.mono', {}, `${mod.versionNumber ?? mod.fileName} · ${fmtSize(mod.sizeBytes)}`),
+      h('div.row-title', {}, item.title),
+      h('div.row-sub.mono', {}, [item.versionNumber ?? item.fileName, item.sizeBytes ? fmtSize(item.sizeBytes) : 'папка'].join(' · ')),
     ),
-    toggle,
+    control,
     h('button.icon-btn.danger', {
       title: 'Удалить',
       onclick: async () => {
-        await guard(() => api.deleteMod(profile.id, mod.fileName));
+        await guard(() => api.deleteContent(profile.id, kind, item.fileName));
         render();
       },
     }, icon('trash', 16)),
   );
 }
 
-function renderBrowseMods(profile: Profile, box: HTMLElement) {
-  const results = h('div.list');
+function renderBrowse(profile: Profile, kind: ContentKind, box: HTMLElement) {
+  const T = KIND_TEXT[kind];
+  const results = h(`div.list${kind === 'shader' ? '.shader-grid' : ''}`);
   const more = h('div.more');
   let offset = 0;
   let total = 0;
@@ -594,33 +622,33 @@ function renderBrowseMods(profile: Profile, box: HTMLElement) {
   let installedIds = new Set<string>();
 
   const search = h('input.input.search-input', {
-    value: state.modsQuery,
-    placeholder: `Поиск модов для ${loaderLabel(profile.loader)} ${profile.mcVersion}…`,
+    value: state.contentQuery[kind],
+    placeholder: kind === 'mod' ? `Поиск модов для ${loaderLabel(profile.loader)} ${profile.mcVersion}…` : 'Поиск шейдеров: Complementary, BSL, Solas…',
     spellcheck: 'false',
   }) as HTMLInputElement;
 
   const load = async (reset: boolean) => {
     if (reset) { offset = 0; clear(results); results.append(h('div.loading', {}, 'Ищу…')); }
     const my = ++req;
-    const [res, mods] = await Promise.all([
-      guard(() => api.searchMods(profile.id, state.modsQuery, offset)),
-      reset ? guard(() => api.listMods(profile.id)) : Promise.resolve(undefined),
+    const [res, items] = await Promise.all([
+      guard(() => api.searchContent(profile.id, kind, state.contentQuery[kind], offset)),
+      reset ? guard(() => api.listContent(profile.id, kind)) : Promise.resolve(undefined),
     ]);
     if (my !== req) return;
-    if (mods) installedIds = new Set(mods.map(m => m.projectId).filter(Boolean) as string[]);
+    if (items) installedIds = new Set(items.map(m => m.projectId).filter(Boolean) as string[]);
     if (reset) clear(results);
     if (!res) return;
     total = res.total;
     if (res.hits.length === 0 && offset === 0) results.append(h('div.empty-state.small', {}, h('p', {}, 'Ничего не найдено')));
-    for (const hit of res.hits) results.append(browseRow(profile, hit, installedIds));
+    for (const hit of res.hits) results.append(kind === 'shader' ? shaderCard(profile, hit, installedIds) : browseRow(profile, hit, installedIds));
     offset += res.hits.length;
     clear(more);
-    if (offset < total) more.append(h('button.btn.ghost', { onclick: () => load(false) }, 'Показать ещё'));
+    if (offset < total) more.append(h('button.btn.ghost', { onclick: () => load(false) }, `Показать ещё ${T.many}`));
   };
 
   let t: number | undefined;
   search.addEventListener('input', () => {
-    state.modsQuery = search.value;
+    state.contentQuery[kind] = search.value;
     clearTimeout(t);
     t = window.setTimeout(() => load(true), 350);
   });
@@ -630,13 +658,14 @@ function renderBrowseMods(profile: Profile, box: HTMLElement) {
   setTimeout(() => search.focus(), 0);
 }
 
-function browseRow(profile: Profile, hit: ModrinthHit, installed: Set<string>): HTMLElement {
+function installButton(profile: Profile, kind: ContentKind, hit: ModrinthHit, installed: Set<string>): HTMLButtonElement {
   const isInstalled = installed.has(hit.project_id);
-  const btn = h(`button.btn.sm${isInstalled ? '.ghost' : '.primary'}`, { disabled: isInstalled }, isInstalled ? icon('check', 14) : icon('download', 14), isInstalled ? 'Установлен' : 'Установить') as HTMLButtonElement;
+  const btn = h(`button.btn.sm${isInstalled ? '.ghost' : '.primary'}`, { disabled: isInstalled },
+    isInstalled ? icon('check', 14) : icon('download', 14), isInstalled ? 'Установлен' : 'Установить') as HTMLButtonElement;
   btn.addEventListener('click', async () => {
     btn.disabled = true;
     btn.replaceChildren('Ставлю…');
-    const names = await guard(() => api.installMod(profile.id, hit.project_id));
+    const names = await guard(() => api.installContent(profile.id, kind, hit.project_id));
     if (names) {
       installed.add(hit.project_id);
       btn.className = 'btn sm ghost';
@@ -647,6 +676,10 @@ function browseRow(profile: Profile, hit: ModrinthHit, installed: Set<string>): 
       btn.replaceChildren(icon('download', 14), 'Установить');
     }
   });
+  return btn;
+}
+
+function browseRow(profile: Profile, hit: ModrinthHit, installed: Set<string>): HTMLElement {
   return h('div.row-item.browse', {},
     modIcon(hit.icon_url),
     h('div.row-main', {},
@@ -656,7 +689,27 @@ function browseRow(profile: Profile, hit: ModrinthHit, installed: Set<string>): 
       h('div.row-desc', {}, hit.description),
       h('div.row-sub', {}, h('span.mono', {}, `↓ ${fmtNum(hit.downloads)}`), ...hit.categories.filter(c => !['fabric', 'forge', 'quilt', 'neoforge'].includes(c)).slice(0, 3).map(c => h('span.tag', {}, c))),
     ),
-    btn,
+    installButton(profile, 'mod', hit, installed),
+  );
+}
+
+function shaderCard(profile: Profile, hit: ModrinthHit, installed: Set<string>): HTMLElement {
+  const cover = hit.featured_gallery ?? hit.gallery?.[0] ?? null;
+  return h('div.shader-card', {},
+    cover
+      ? h('div.shader-cover', {}, h('img', { src: cover, alt: '', loading: 'lazy' }))
+      : h('div.shader-cover.blank', {}, icon('sun', 34)),
+    h('div.shader-body', {},
+      h('div.shader-head', {},
+        modIcon(hit.icon_url, 'shader'),
+        h('div.row-main', {},
+          h('a.mod-link.row-title', { href: `https://modrinth.com/shader/${hit.slug}`, target: '_blank' }, hit.title),
+          h('div.row-sub', {}, h('span', {}, hit.author), h('span.mono', {}, `↓ ${fmtNum(hit.downloads)}`)),
+        ),
+      ),
+      h('div.row-desc', {}, hit.description),
+      installButton(profile, 'shader', hit, installed),
+    ),
   );
 }
 
