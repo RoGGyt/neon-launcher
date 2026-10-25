@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Профиль игрока — Neon Launcher</title>
+  <meta name="description" content="Скин игрока в 3D: вращай, смотри анимации, скачай или поделись ссылкой.">
+  <meta name="theme-color" content="#05060f">
+  <link rel="icon" href="img/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Unbounded:wght@500;700;800&display=swap&subset=cyrillic" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <a class="logo" href="./"><img src="img/icon.png" alt="">NEON <span>launcher</span></a>
+      <nav aria-label="Разделы">
+        <a href="./#features">Возможности</a>
+        <a href="./#cloud">Облачный мир</a>
+        <a href="player.html" aria-current="page">Профиль игрока</a>
+        <a href="./#faq">Вопросы</a>
+      </nav>
+      <a class="btn btn-sm btn-main js-download" href="https://github.com/RoGGyt/neon-launcher/releases/latest">Скачать</a>
+    </div>
+  </header>
+
+  <main class="player-page">
+    <div class="iso-bg"></div>
+    <div class="wrap pp-grid">
+      <div class="viewer" id="viewer">
+        <canvas id="skin3d" aria-label="3D-модель скина, крути мышкой"></canvas>
+        <div class="flat" id="flat" hidden><canvas id="skin2d" width="160" height="320"></canvas></div>
+        <div class="state" id="state">Введи ник, чтобы увидеть скин</div>
+      </div>
+
+      <div class="pp-info">
+        <h1 id="nickTitle">Профиль игрока</h1>
+        <p class="sub" id="sub">Скин в 3D: крути мышкой, приближай колёсиком.</p>
+
+        <form class="nick-form" id="form">
+          <label for="nick" style="position:absolute;left:-9999px">Ник</label>
+          <input class="input" id="nick" name="u" placeholder="Ник игрока" maxlength="16" autocomplete="off" spellcheck="false" required pattern="[A-Za-z0-9_]{2,16}" title="Латиница, цифры и _">
+          <button class="btn btn-main" type="submit">Показать</button>
+        </form>
+
+        <div class="seg" role="group" aria-label="Откуда брать скин">
+          <button type="button" data-src="ely" aria-pressed="true">Ely.by</button>
+          <button type="button" data-src="mojang" aria-pressed="false">Лицензия</button>
+        </div>
+
+        <div class="anim-row" role="group" aria-label="Анимация" id="anims">
+          <button class="chip" type="button" data-anim="idle" aria-pressed="false">Стоит</button>
+          <button class="chip" type="button" data-anim="walk" aria-pressed="true">Идёт</button>
+          <button class="chip" type="button" data-anim="run" aria-pressed="false">Бежит</button>
+          <button class="chip" type="button" data-anim="wave" aria-pressed="false">Машет</button>
+          <button class="chip" type="button" data-anim="spin" aria-pressed="true">Вращение</button>
+        </div>
+
+        <div class="pp-actions" id="actions" hidden>
+          <button class="btn" type="button" id="copyLink">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>
+            Скопировать ссылку
+          </button>
+          <a class="btn" id="downloadSkin" download>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5"/><path d="M4 19h16"/></svg>
+            Скачать скин
+          </a>
+        </div>
+
+        <div class="howto">
+          <h2>Как поставить свой скин</h2>
+          <ol>
+            <li>Зарегистрируйся на <a href="https://account.ely.by/register" target="_blank" rel="noopener">ely.by</a>, это бесплатно.</li>
+            <li>Загрузи скин в разделе скинов на Ely.by.</li>
+            <li>В Neon Launcher открой «Настройки» и войди через Ely.by.</li>
+            <li>Готово: скин виден в игре и на этой странице.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Neon Launcher, сделал RoGGyt</span>
+      <span>Не связан с Mojang и Microsoft. Скины принадлежат их авторам.</span>
+      <a href="./">На главную</a>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/skinview3d@3/bundles/skinview3d.bundle.js"></script>
+  <script src="site.js"></script>
+  <script>
+    (() => {
+      const $ = id => document.getElementById(id);
+      const params = new URLSearchParams(location.search);
+      let source = params.get('src') === 'mojang' ? 'mojang' : 'ely';
+      let nick = (params.get('u') || '').trim();
+      let viewer = null;
+      let anim = 'walk';
+      let spin = true;
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduce) { anim = 'idle'; spin = false; }
+
+      const skinUrl = (n, s) => s === 'mojang'
+        ? `https://mc-heads.net/skin/${encodeURIComponent(n)}`
+        : `https://skinsystem.ely.by/skins/${encodeURIComponent(n)}.png`;
+      const capeUrl = n => `https://skinsystem.ely.by/cloaks/${encodeURIComponent(n)}.png`;
+
+      function setState(t) { $('state').textContent = t || ''; }
+
+      function viewerSize() {
+        const r = $('viewer').getBoundingClientRect();
+        return { width: Math.round(r.width), height: Math.round(r.height) };
+      }
+
+      function make3d() {
+        if (viewer || !window.skinview3d) return viewer;
+        const { width, height } = viewerSize();
+        viewer = new skinview3d.SkinViewer({ canvas: $('skin3d'), width, height });
+        viewer.zoom = 0.85;
+        viewer.fov = 60;
+        viewer.controls.enablePan = false;
+        addEventListener('resize', () => { const s = viewerSize(); viewer.setSize(s.width, s.height); });
+        applyAnim();
+        return viewer;
+      }
+
+      function applyAnim() {
+        if (!viewer) return;
+        const A = skinview3d;
+        const map = { idle: A.IdleAnimation, walk: A.WalkingAnimation, run: A.RunningAnimation, wave: A.WaveAnimation || A.IdleAnimation };
+        viewer.animation = map[anim] ? new map[anim]() : null;
+        viewer.autoRotate = spin;
+        viewer.autoRotateSpeed = 0.6;
+        document.querySelectorAll('[data-anim]').forEach(b => {
+          b.setAttribute('aria-pressed', String(b.dataset.anim === 'spin' ? spin : b.dataset.anim === anim));
+        });
+      }
+
+      // запасной вариант без 3D: рисуем скин спереди по кусочкам (работает и без CORS)
+      function draw2d(url) {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+            const c = $('skin2d');
+            const ctx = c.getContext('2d');
+            ctx.imageSmoothingEnabled = false;
+            ctx.clearRect(0, 0, c.width, c.height);
+            const k = c.width / 16;
+            const legacy = img.height === 32;
+            const part = (sx, sy, w, h, dx, dy, mirror) => {
+              ctx.save();
+              if (mirror) { ctx.translate((dx + w) * k, 0); ctx.scale(-1, 1); dx = 0; }
+              ctx.drawImage(img, sx, sy, w, h, dx * k, dy * k, w * k, h * k);
+              ctx.restore();
+            };
+            part(8, 8, 8, 8, 4, 0);            // голова
+            part(40, 8, 8, 8, 4, 0);           // шапка/волосы поверх
+            part(20, 20, 8, 12, 4, 8);         // туловище
+            part(44, 20, 4, 12, 0, 8);         // правая рука
+            part(4, 20, 4, 12, 4, 20);         // правая нога
+            if (legacy) { part(44, 20, 4, 12, 12, 8, true); part(4, 20, 4, 12, 8, 20, true); }
+            else { part(36, 52, 4, 12, 12, 8); part(20, 52, 4, 12, 8, 20); }
+            resolve();
+          };
+          img.onerror = () => reject(new Error('not found'));
+          img.src = url;
+        });
+      }
+
+      async function show() {
+        const url = skinUrl(nick, source);
+        $('nickTitle').textContent = nick;
+        $('sub').textContent = source === 'ely' ? 'Скин с Ely.by, такой же видно в игре через Neon Launcher.' : 'Скин лицензионного аккаунта Minecraft.';
+        document.title = `${nick} — профиль игрока`;
+        $('downloadSkin').href = url;
+        $('downloadSkin').setAttribute('download', `${nick}.png`);
+        $('actions').hidden = false;
+        setState('Загружаю скин…');
+        const v = make3d();
+        try {
+          if (!v) throw new Error('no 3d');
+          $('flat').hidden = true; $('skin3d').hidden = false;
+          await v.loadSkin(url);
+          if (source === 'ely') await v.loadCape(capeUrl(nick)).catch(() => v.resetCape?.());
+          else v.resetCape?.();
+          setState('');
+        } catch {
+          // 3D не загрузил картинку (нет скина или сервер не разрешает) — пробуем плоский вид
+          try {
+            await draw2d(url);
+            $('skin3d').hidden = true; $('flat').hidden = false;
+            setState('Показан плоский вид');
+          } catch {
+            $('skin3d').hidden = true; $('flat').hidden = true;
+            setState(source === 'ely' ? 'У этого ника нет скина на Ely.by. Попробуй «Лицензия».' : 'Скин не найден. Проверь ник.');
+          }
+        }
+      }
+
+      function go(n) {
+        nick = n;
+        const q = new URLSearchParams({ u: n });
+        if (source === 'mojang') q.set('src', 'mojang');
+        history.replaceState(null, '', `?${q}`);
+        show();
+      }
+
+      $('form').addEventListener('submit', e => { e.preventDefault(); const n = $('nick').value.trim(); if (n) go(n); });
+      document.querySelectorAll('[data-src]').forEach(b => b.addEventListener('click', () => {
+        source = b.dataset.src;
+        document.querySelectorAll('[data-src]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+        if (nick) go(nick);
+      }));
+      document.querySelectorAll('[data-anim]').forEach(b => b.addEventListener('click', () => {
+        if (b.dataset.anim === 'spin') spin = !spin; else anim = b.dataset.anim;
+        applyAnim();
+      }));
+      $('copyLink').addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(location.href); $('copyLink').lastChild.textContent = ' Скопировано'; }
+        catch { prompt('Ссылка на профиль', location.href); }
+        setTimeout(() => { $('copyLink').lastChild.textContent = ' Скопировать ссылку'; }, 1800);
+      });
+
+      document.querySelectorAll('[data-src]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.src === source)));
+      if (nick) { $('nick').value = nick; show(); }
+      else { make3d(); $('skin3d').hidden = true; applyAnim(); }
+    })();
+  </script>
+</body>
+</html>

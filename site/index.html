@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Neon Launcher — Minecraft-лаунчер для игры с друзьями</title>
+  <meta name="description" content="Любые версии Minecraft, Fabric и Forge, моды и шейдеры с Modrinth в пару кликов и общий облачный мир, который не зависит от того, кто сейчас онлайн.">
+  <meta property="og:title" content="Neon Launcher">
+  <meta property="og:description" content="Minecraft с друзьями без возни: любые версии, моды, шейдеры и общий мир в облаке.">
+  <meta property="og:image" content="https://roggyt.github.io/neon-launcher/img/og.png">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#05060f">
+  <link rel="icon" href="img/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Unbounded:wght@500;700;800&display=swap&subset=cyrillic" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <a class="logo" href="./"><img src="img/icon.png" alt="">NEON <span>launcher</span></a>
+      <nav aria-label="Разделы">
+        <a href="#features">Возможности</a>
+        <a href="#cloud">Облачный мир</a>
+        <a href="player.html">Профиль игрока</a>
+        <a href="#faq">Вопросы</a>
+      </nav>
+      <a class="btn btn-sm btn-main js-download" href="https://github.com/RoGGyt/neon-launcher/releases/latest">Скачать</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="iso-bg"></div>
+      <div class="wrap">
+        <h1>Майнкрафт с друзьями без возни</h1>
+        <p class="lead">Любая версия, Fabric и Forge, моды и шейдеры в пару кликов. А общий мир живёт в облаке: друзья заходят в него, даже когда тебя нет онлайн.</p>
+        <div class="hero-cta">
+          <a class="btn btn-main js-download" href="https://github.com/RoGGyt/neon-launcher/releases/latest">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5"/><path d="M4 19h16"/></svg>
+            Скачать для Windows
+          </a>
+          <span class="dl-meta js-dl-meta">Windows 10 и 11, обновляется сам</span>
+        </div>
+        <div class="stage" id="stage">
+          <div class="window"><img src="img/home.webp" width="1600" height="976" alt="Главный экран Neon Launcher: текущий профиль, кнопка «Играть» и список профилей"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="features">
+      <div class="wrap">
+        <div class="block-head">
+          <h2>Всё, что обычно делаешь руками, лаунчер делает сам</h2>
+          <p>Выбираешь, во что играть, остальное он скачает, поставит и настроит.</p>
+        </div>
+        <div class="showcase">
+          <div class="feat-list" role="tablist" aria-label="Возможности">
+            <button class="feat" role="tab" aria-selected="true" data-shot="home">
+              <h3>Любая версия игры</h3>
+              <p>От самых первых альф до свежих снапшотов. Нужная Java скачается сама, у каждого профиля своя папка с мирами.</p>
+            </button>
+            <button class="feat" role="tab" aria-selected="false" data-shot="mods">
+              <h3>Моды с Modrinth</h3>
+              <p>Поиск по каталогу и установка в один клик. Fabric API и другие зависимости подтягиваются автоматически.</p>
+            </button>
+            <button class="feat" role="tab" aria-selected="false" data-shot="shaders">
+              <h3>Шейдеры</h3>
+              <p>Complementary, BSL, Solas и сотни других. Iris и Sodium ставятся сами, шейдер включается кнопкой.</p>
+            </button>
+            <button class="feat" role="tab" aria-selected="false" data-shot="profiles">
+              <h3>Профили и Fabric или Forge</h3>
+              <p>Ванилла, Fabric или Forge нужной версии, память, свои JVM-аргументы. Сборкой можно поделиться кодом: у друга появится точно такая же.</p>
+            </button>
+            <button class="feat" role="tab" aria-selected="false" data-shot="cloud">
+              <h3>Игра с друзьями</h3>
+              <p>Свой мир для друзей через e4all без Hamachi, сервер с автовходом или облачный мир на Яндекс Диске.</p>
+            </button>
+          </div>
+          <div class="shot-frame" aria-live="polite">
+            <img class="on" data-name="home" src="img/home.webp" alt="Главный экран лаунчера" loading="lazy">
+            <img data-name="mods" src="img/mods.webp" alt="Каталог модов Modrinth в лаунчере" loading="lazy">
+            <img data-name="shaders" src="img/shaders.webp" alt="Каталог шейдеров с превью" loading="lazy">
+            <img data-name="profiles" src="img/profiles.webp" alt="Список профилей с разными версиями" loading="lazy">
+            <img data-name="cloud" src="img/cloud.webp" alt="Окно «Играть с друзьями», вкладка облачного мира" loading="lazy">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block cloud-sec" id="cloud">
+      <div class="wrap">
+        <div class="block-head">
+          <h2>Общий мир, который не ждёт хозяина</h2>
+          <p>Мир лежит на Яндекс Диске. Кто первый нажал «Играть», тот и хост, остальные подключаются к нему сами. Попробуй, что будет, если хост уйдёт.</p>
+        </div>
+        <div class="demo">
+          <div class="sim" id="sim" aria-label="Схема облачного мира">
+            <svg class="wires" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
+            <div class="cloud-node">
+              <div class="disk"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#00f0ff" stroke-width="1.6" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4 4 0 0 1-.5 9.5z"/></svg></div>
+              <span>«Наш мир»</span>
+              <small class="js-ver">версия 14</small>
+            </div>
+            <div class="sim-log" id="simLog" role="status">Мир лежит в облаке, сейчас никто не играет.</div>
+          </div>
+          <div class="demo-side">
+            <p class="hint">Нажимай по очереди:</p>
+            <div class="actions">
+              <button class="act" data-act="start">Все жмут «Играть» <span>кто первый, тот хост</span></button>
+              <button class="act" data-act="leave" disabled>Хост вышел из игры <span>мир сохраняется</span></button>
+              <button class="act" data-act="crash" disabled>У хоста вырубился свет <span>без сохранения</span></button>
+              <button class="act" data-act="join" disabled>Вернуться в игру <span>заходит как гость</span></button>
+            </div>
+            <div class="facts">
+              <div><b>Друзья переподключаются сами.</b> Пауза примерно на минуту, жать ничего не надо.</div>
+              <div><b>Потерять можно максимум 5 минут.</b> Хост сохраняет мир в облако каждые 5 минут.</div>
+              <div><b>Мир на твоём Диске.</b> Лаунчер видит только свою папку, остальные файлы ему недоступны.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="wrap">
+        <div class="block-head"><h2>Как начать</h2></div>
+        <div class="steps">
+          <div class="step">
+            <div class="n" aria-hidden="true">1</div>
+            <h3>Скачай установщик</h3>
+            <p>Один файл, около 100 МБ. Дальше лаунчер обновляется сам.</p>
+          </div>
+          <div class="step">
+            <div class="n" aria-hidden="true">2</div>
+            <h3>Впиши ник и выбери версию</h3>
+            <p>Или вставь код сборки от друга: версия и моды поставятся сами.</p>
+          </div>
+          <div class="step">
+            <div class="n" aria-hidden="true">3</div>
+            <h3>Жми «Играть»</h3>
+            <p>Первый запуск качает игру пару минут, следующие стартуют сразу.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" style="padding-top:0">
+      <div class="wrap">
+        <div class="skin-teaser">
+          <div>
+            <h2>Покажи свой скин</h2>
+            <p>У каждого игрока есть страница профиля со скином в 3D. Скины берутся с Ely.by, те же, что видны в игре через лаунчер.</p>
+            <form class="nick-form" action="player.html" method="get">
+              <label class="sr" for="teaserNick" style="position:absolute;left:-9999px">Ник</label>
+              <input class="input" id="teaserNick" name="u" placeholder="Ник игрока" maxlength="16" autocomplete="off" spellcheck="false" required>
+              <button class="btn btn-main" type="submit">Открыть профиль</button>
+            </form>
+          </div>
+          <canvas class="mini-skin" id="miniSkin" width="220" height="300" aria-hidden="true"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="faq" style="padding-top:0">
+      <div class="wrap">
+        <div class="block-head"><h2>Вопросы</h2></div>
+        <div class="faq">
+          <details>
+            <summary>Windows пишет «Windows защитила ваш компьютер». Это опасно?</summary>
+            <p>Так Windows реагирует на любую программу без платной цифровой подписи. Нажми «Подробнее», потом «Выполнить в любом случае». Весь код лаунчера открыт на GitHub, а каждый установщик собирается там же автоматически.</p>
+          </details>
+          <details>
+            <summary>Нужен ли аккаунт?</summary>
+            <p>Для одиночной игры и игры с друзьями хватит ника. Если хочешь, чтобы в игре был виден твой скин, войди через бесплатный аккаунт Ely.by. На сервера с проверкой лицензии Microsoft пускают только с купленной игрой.</p>
+          </details>
+          <details>
+            <summary>Как работает облачный мир и сколько места он займёт?</summary>
+            <p>Мир хранится на Яндекс Диске того, кто его создал, в папке приложения. Бесплатных 5 ГБ хватает надолго: обычный мир весит от 50 до 500 МБ. После первой загрузки качаются только изменения. Нужен Fabric и версия 1.20 или новее.</p>
+          </details>
+          <details>
+            <summary>Мои миры и моды не потеряются при обновлении?</summary>
+            <p>Нет. Обновление меняет только сам лаунчер, папка с играми не трогается.</p>
+          </details>
+          <details>
+            <summary>Как полностью удалить лаунчер?</summary>
+            <p>Через «Приложения» в Windows. Установщик предложит стереть и всё скачанное: версии игры, Java, моды, шейдеры и профили. В системе ничего не останется.</p>
+          </details>
+          <details>
+            <summary>Есть версия для Mac или Linux?</summary>
+            <p>Пока только Windows. Лаунчер написан на Electron, так что сборки под другие системы появятся.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section class="final">
+      <div class="iso-bg" style="mask-image:radial-gradient(ellipse 60% 70% at 50% 50%, #000 10%, transparent 70%)"></div>
+      <div class="wrap" style="position:relative">
+        <h2>Собери друзей и заходите</h2>
+        <div class="hero-cta">
+          <a class="btn btn-main js-download" href="https://github.com/RoGGyt/neon-launcher/releases/latest">Скачать для Windows</a>
+          <a class="ghost-link" href="https://github.com/RoGGyt/neon-launcher">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5z"/></svg>
+            Открытый код на GitHub
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Neon Launcher, сделал RoGGyt</span>
+      <span>Не связан с Mojang и Microsoft. Minecraft — товарный знак Mojang AB.</span>
+      <a href="https://github.com/RoGGyt/neon-launcher/releases">Все версии</a>
+    </div>
+  </footer>
+
+  <script src="site.js"></script>
+  <script>
+    // ---------- витрина ----------
+    (() => {
+      const tabs = [...document.querySelectorAll('.feat')];
+      const imgs = [...document.querySelectorAll('.shot-frame img')];
+      const pick = tab => {
+        tabs.forEach(t => t.setAttribute('aria-selected', String(t === tab)));
+        imgs.forEach(i => i.classList.toggle('on', i.dataset.name === tab.dataset.shot));
+      };
+      tabs.forEach((t, i) => {
+        t.addEventListener('click', () => pick(t));
+        t.addEventListener('keydown', e => {
+          if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+          e.preventDefault();
+          const next = tabs[(i + (e.key === 'ArrowDown' ? 1 : tabs.length - 1)) % tabs.length];
+          next.focus(); pick(next);
+        });
+      });
+    })();
+
+    // ---------- окно лаунчера «встаёт» при загрузке ----------
+    requestAnimationFrame(() => setTimeout(() => document.getElementById('stage').classList.add('in'), 150));
+
+    // ---------- демка облачного мира ----------
+    (() => {
+      const sim = document.getElementById('sim');
+      const svg = sim.querySelector('svg');
+      const logEl = document.getElementById('simLog');
+      const verEl = sim.querySelector('.js-ver');
+      const CLOUD = { x: 50, y: 22 };
+      const people = [
+        { name: 'RoGGyt', color: 'linear-gradient(135deg,#00c2ff,#5b6cff)', x: 17, y: 54 },
+        { name: 'Vasya', color: 'linear-gradient(135deg,#ff5ea8,#8a5cff)', x: 50, y: 61 },
+        { name: 'Vika', color: 'linear-gradient(135deg,#9dff00,#1fb36b)', x: 83, y: 54 },
+      ].map(p => ({ ...p, online: false, host: false, role: '' }));
+      let version = 14;
+      let syncing = null; // кто сейчас качает или заливает мир
+      let busy = false;
+
+      people.forEach(p => {
+        p.el = document.createElement('div');
+        p.el.className = 'player gone';
+        p.el.style.left = p.x + '%';
+        p.el.style.top = p.y + '%';
+        p.el.innerHTML = `<div class="face" style="background:${p.color}">${p.name[0]}</div><div class="name">${p.name}</div><div class="role"></div>`;
+        sim.appendChild(p.el);
+      });
+
+      const host = () => people.find(p => p.host);
+      const wait = ms => new Promise(r => setTimeout(r, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : ms));
+      const log = t => { logEl.textContent = t; };
+
+      function draw() {
+        const h = host();
+        let html = '';
+        const line = (a, b, cls) => `<line class="wire ${cls}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y - 8}" vector-effect="non-scaling-stroke"/>`;
+        people.forEach(p => {
+          html += line(CLOUD, p, syncing === p ? 'sync' : 'off');
+          if (h && p !== h && p.online && !p.waiting) html += line(h, p, 'play');
+        });
+        svg.innerHTML = html;
+        people.forEach(p => {
+          p.el.className = 'player' + (p.host ? ' host' : '') + (!p.online ? ' gone' : '') + (p.waiting ? ' waiting' : '');
+          p.el.querySelector('.role').textContent = p.role;
+        });
+        verEl.textContent = `версия ${version}`;
+        const any = people.some(p => p.online);
+        document.querySelector('[data-act="start"]').disabled = busy || any;
+        document.querySelector('[data-act="leave"]').disabled = busy || !h;
+        document.querySelector('[data-act="crash"]').disabled = busy || !h || people.filter(p => p.online).length < 2;
+        document.querySelector('[data-act="join"]').disabled = busy || !h || people.every(p => p.online);
+      }
+
+      async function becomeHost(p, fromAutosave) {
+        p.host = true; p.online = true; p.waiting = false;
+        syncing = p; p.role = 'скачивает мир…';
+        log(`${p.name} стал хостом и скачивает мир из облака${fromAutosave ? ' (последнее автосохранение)' : ''}.`);
+        draw(); await wait(1300);
+        syncing = null; p.role = 'хост';
+        people.filter(o => o.online && o !== p).forEach(o => { o.waiting = false; o.role = 'играет'; });
+        draw();
+      }
+
+      async function run(act) {
+        busy = true; draw();
+        if (act === 'start') {
+          people.forEach(p => { p.online = true; p.waiting = true; p.role = 'ждёт…'; });
+          await becomeHost(people[0]);
+          log('Все в игре: RoGGyt хост, Vasya и Vika подключились к нему сами.');
+        } else if (act === 'leave' || act === 'crash') {
+          const h = host();
+          const others = people.filter(p => p.online && p !== h);
+          others.forEach(o => { o.waiting = true; o.role = 'ждёт…'; });
+          if (act === 'leave') {
+            syncing = h; h.role = 'сохраняет мир…';
+            log(`${h.name} вышел. Лаунчер заливает мир в облако, остальные ждут.`);
+            draw(); await wait(1400);
+            version++; syncing = null;
+          } else {
+            log(`У ${h.name} пропал свет. Через минуту остальные поймут, что хоста нет.`);
+            h.role = 'не отвечает'; draw(); await wait(1600);
+          }
+          h.host = false; h.online = false; h.role = '';
+          if (others.length) {
+            await becomeHost(others[0], act === 'crash');
+            log(act === 'leave'
+              ? `${others[0].name} теперь хост${others[1] ? `, ${others[1].name} переподключается автоматически` : ''}. Ничего не потерялось.`
+              : `Хостом стал ${others[0].name}, мир взят из автосохранения. Потерялось не больше 5 минут.`);
+          } else {
+            log('Все вышли. Мир ждёт в облаке, следующий, кто нажмёт «Играть», станет хостом.');
+          }
+        } else if (act === 'join') {
+          const p = people.find(o => !o.online);
+          p.online = true; p.waiting = true; p.role = 'подключается…'; draw(); await wait(700);
+          p.waiting = false; p.role = 'играет';
+          log(`${p.name} снова в игре и сразу попадает к хосту ${host().name}.`);
+        }
+        busy = false; draw();
+      }
+
+      document.querySelectorAll('.act').forEach(b => b.addEventListener('click', () => run(b.dataset.act)));
+      draw();
+    })();
+  </script>
+</body>
+</html>
