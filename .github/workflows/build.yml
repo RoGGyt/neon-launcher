@@ -30,20 +30,31 @@ jobs:
       - name: Установка зависимостей
         run: npm install
 
-      - name: Сборка и публикация
-        run: npm run build && npx electron-builder --win --publish always
+      - name: Сборка
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee build.log
+          npx electron-builder --win --publish never 2>&1 | tee -a build.log
+          ls -la release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
-      - name: Описание релиза
+      # exe + latest.yml + blockmap: по latest.yml установленный лаунчер узнаёт о новой версии
+      - name: Публикация в Releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
-          gh release edit "v$VERSION" --latest --title "Neon Launcher $VERSION" --notes "**NeonLauncher-Setup-$VERSION.exe** — установщик, дальше лаунчер обновляется сам.
+          NOTES="**NeonLauncher-Setup-$VERSION.exe** — установщик, дальше лаунчер обновляется сам.
           **NeonLauncher-portable-$VERSION.exe** — без установки (обновлять вручную).
 
           Если Windows покажет «Windows защитила ваш компьютер»: «Подробнее» → «Выполнить в любом случае».
 
           Изменения: $COMMIT_MSG"
+          gh release create "v$VERSION" release/*.exe release/latest.yml release/*.blockmap \
+            --title "Neon Launcher $VERSION" --notes "$NOTES" --latest
+
+      - name: Показать ошибку сборки
+        if: failure()
+        run: |
+          [ -f build.log ] && echo "::error title=Сборка::$(tail -n 40 build.log | sed -e 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')" || true
