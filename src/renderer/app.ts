@@ -1067,7 +1067,7 @@ function viewSettings(): HTMLElement {
         h('div.field', {}, h('label', {}, 'Память для новых профилей ', ramOut), ram),
         h('div.setting-row', {}, h('div.setting-label', {}, 'После запуска игры'), afterSelect),
         h('div.setting-row', {},
-          h('div', {}, h('div.setting-label', {}, 'Меню Neon в игре'), h('div.muted.small', {}, 'Неоновое главное меню с моделью игрока. Версии 1.20.1 и 1.21.11, кроме Forge')),
+          h('div', {}, h('div.setting-label', {}, 'Интерфейс Neon в игре'), h('div.muted.small', {}, 'Тёмное минималистичное меню, кнопки и шрифт. Версии 1.20.1 и 1.21.11, кроме Forge')),
           h(`button.switch${s.neonMenu !== false ? '.on' : ''}`, { onclick: () => saveSetting({ neonMenu: s.neonMenu === false }) }, h('span.knob')),
         ),
         toggleRow('Показывать снапшоты', 'Тестовые версии в списке по умолчанию', 'showSnapshots'),

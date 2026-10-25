@@ -14,7 +14,7 @@ import { installFabric, installForge } from './loaders';
 import { elyEnsureValid, ensureAuthlibInjector } from './auth';
 import { getSettings, saveSettings, updateProfile } from './store';
 import { addServerToList } from './nbt';
-import { neonMenuJar, hiddenFabric } from './neonmenu';
+import { neonMenuJar, hiddenFabric, hiddenFabricApi } from './neonmenu';
 import type { Account, Profile, ProgressEvent, LogEvent } from '../shared/types';
 
 export interface LaunchHooks {
@@ -85,8 +85,8 @@ function processArgs(list: Argument[] | undefined, vars: Record<string, string>,
 }
 
 interface Prepared {
-  /** jar Neon Client, если меню включено */
-  menuJar?: string | null;
+  /** jar-файлы, которые подключаются без папки mods (Neon Client и при необходимости Fabric API) */
+  addMods?: string[];
   version: ResolvedVersion;
   java: string;
   classpath: string[];
@@ -141,8 +141,12 @@ async function prepare(profile: Profile, hooks: LaunchHooks): Promise<Prepared> 
 
   // меню Neon на ванильном профиле: незаметно запускаем через Fabric
   const menuJar = neonMenuJar(profile);
-  if (menuJar && profile.loader === 'vanilla') {
-    versionId = await hiddenFabric(profile.mcVersion, l => hooks.log(l));
+  const addMods: string[] = [];
+  if (menuJar) {
+    if (profile.loader === 'vanilla') versionId = await hiddenFabric(profile.mcVersion, l => hooks.log(l));
+    addMods.push(menuJar);
+    const api = await hiddenFabricApi(profile, l => hooks.log(l));
+    if (api) addMods.push(api);
   }
 
   let version = await resolveVersion(versionId!);
@@ -179,7 +183,7 @@ async function prepare(profile: Profile, hooks: LaunchHooks): Promise<Prepared> 
   const clientJar = paths.versionJar(version.jarId);
   if (fs.existsSync(clientJar) && !classpath.includes(clientJar)) classpath.push(clientJar);
 
-  return { menuJar, version, java, classpath, nativesDir, assetsIndex: assets.indexId, legacyAssetsDir: assets.legacyDir, loggingArg: logging?.argument ?? null };
+  return { addMods, version, java, classpath, nativesDir, assetsIndex: assets.indexId, legacyAssetsDir: assets.legacyDir, loggingArg: logging?.argument ?? null };
 }
 
 async function resolveAccount(hooks: LaunchHooks): Promise<Account> {
@@ -268,7 +272,7 @@ export function buildCommand(profile: Profile, prep: Prepared, account: Account,
   if (authlib) jvm.push(`-javaagent:${authlib}=ely.by`);
   jvm.push(...splitArgs(profile.jvmArgs));
   jvm.push(...(opts.extraJvm ?? []));
-  if (prep.menuJar) jvm.push(`-Dfabric.addMods=${prep.menuJar}`);
+  if (prep.addMods?.length) jvm.push(`-Dfabric.addMods=${prep.addMods.join(path.delimiter)}`);
   if (prep.loggingArg) jvm.push(prep.loggingArg);
 
   const versionJvm = processArgs(v.arguments?.jvm, vars, features);
