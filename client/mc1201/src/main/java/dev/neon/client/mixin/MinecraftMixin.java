@@ -1,6 +1,7 @@
 package dev.neon.client.mixin;
 
 import dev.neon.client.NeonMenu;
+import dev.neon.client.NeonTour;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
@@ -18,5 +19,10 @@ public abstract class MinecraftMixin {
             ((Minecraft) (Object) this).setScreen(new NeonMenu());
             ci.cancel();
         }
+    }
+
+    @Inject(method = "tick", at = @At("TAIL"))
+    private void neon$tour(CallbackInfo ci) {
+        NeonTour.tick((Minecraft) (Object) this);
     }
 }

@@ -1,4 +1,4 @@
-// Neon Client: своё главное меню Minecraft. Собирается отдельно под каждую версию.
+// Neon Client: интерфейс игры в стиле Neon. Собирается отдельно под каждую версию Minecraft.
 plugins {
     id 'fabric-loom' version '1.11-SNAPSHOT' apply false
 }
@@ -7,18 +7,36 @@ subprojects {
     apply plugin: 'fabric-loom'
 
     group = 'dev.neon'
-    version = '1.0.0'
+    version = '2.0.0'
     base { archivesName = "neonclient-${project.name}" }
 
     repositories {
         maven { url = 'https://maven.fabricmc.net/' }
     }
 
+    def loaderVersion = rootProject.findProperty('loader_version') ?: '0.16.14'
+    // Fabric API нужен только при запуске игры в CI (ресурсы мода грузит fabric-resource-loader)
+    def fabricApi = rootProject.findProperty("fabric_api_${project.name}")
+
     dependencies {
         minecraft "com.mojang:minecraft:${project.mc_version}"
         mappings loom.officialMojangMappings()
-        modImplementation "net.fabricmc:fabric-loader:0.16.14"
+        modImplementation "net.fabricmc:fabric-loader:${loaderVersion}"
+        if (fabricApi) modLocalRuntime "net.fabricmc.fabric-api:fabric-api:${fabricApi}"
     }
+
+    loom {
+        runs {
+            client {
+                programArgs '--width', '1920', '--height', '1080'
+                def tour = rootProject.findProperty('tour')
+                if (tour) vmArg "-Dneon.tour=${tour}"
+            }
+        }
+    }
+
+    // общие ресурсы (шрифт, фон, иконки) лежат в client/common
+    sourceSets.main.resources.srcDir rootProject.file('common/resources')
 
     processResources {
         inputs.property 'mc', project.mc_version

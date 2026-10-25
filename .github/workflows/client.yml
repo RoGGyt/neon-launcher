@@ -1,15 +1,24 @@
-name: Сборка Neon Client
+name: Neon Client — лаборатория
 
-# только вручную: собирает клиент и выгружает сигнатуры классов Minecraft для разработки
+# Собирает клиент, запускает игру в виртуальном экране и снимает скриншоты интерфейса.
+# Результаты (скриншоты, сигнатуры классов, логи) кладутся в ветку ci-notes.
 on:
+  push:
+    branches: [main]
+    paths: ['client/**', '.github/workflows/client.yml']
   workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: client-lab
+  cancel-in-progress: true
+
 jobs:
-  client:
+  lab:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -22,90 +31,163 @@ jobs:
         with:
           gradle-version: 8.14.3
 
+      - name: Версии Fabric
+        run: |
+          LOADER=$(curl -fsSL https://meta.fabricmc.net/v2/versions/loader | python3 -c "import json,sys; print(next(v['version'] for v in json.load(sys.stdin) if v.get('stable')))")
+          META=$(curl -fsSL https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml)
+          API1201=$(echo "$META" | grep -o '<version>[^<]*+1\.20\.1</version>' | tail -1 | sed 's/<[^>]*>//g')
+          API12111=$(echo "$META" | grep -o '<version>[^<]*+1\.21\.11</version>' | tail -1 | sed 's/<[^>]*>//g')
+          echo "loader=$LOADER api1201=$API1201 api12111=$API12111"
+          echo "GRADLE_ARGS=-Ploader_version=$LOADER -Pfabric_api_mc1201=$API1201 -Pfabric_api_mc12111=$API12111" >> "$GITHUB_ENV"
+          mkdir -p notes && echo "loader=$LOADER api1201=$API1201 api12111=$API12111" > notes/versions.txt
+
       - name: Сборка
         working-directory: client
         run: |
           set -o pipefail
-          gradle build --continue --no-daemon 2>&1 | tee build.log
+          gradle build --continue --no-daemon $GRADLE_ARGS 2>&1 | tee ../notes/build.log
 
-      - name: Сигнатуры классов Minecraft (для разработки)
+      - name: Шрифт Inter (OFL)
         if: always()
         run: |
-          mkdir -p notes
+          mkdir -p notes/fonts /tmp/inter
+          curl -fsSL -o /tmp/inter.zip https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip || exit 0
+          unzip -q -o /tmp/inter.zip -d /tmp/inter
+          find /tmp/inter -name "Inter-Medium.ttf" -o -name "Inter-SemiBold.ttf" -o -name "Inter-Regular.ttf" -o -name "Inter-Bold.ttf" | grep -v italic | while read f; do cp "$f" notes/fonts/; done
+          cp /tmp/inter/LICENSE.txt notes/fonts/ 2>/dev/null || true
+          ls -la notes/fonts
+
+      - name: Сигнатуры и ресурсы Minecraft
+        if: always()
+        run: |
           for v in 1.20.1 1.21.11; do
-            find client/.gradle ~/.gradle -name "*.jar" -path "*minecraft*" 2>/dev/null | grep "$v" >> notes/alljars.txt || true
-            JAR=$(find client/.gradle ~/.gradle -name "*.jar" -path "*minecraftMaven*" 2>/dev/null | grep "$v" | grep -iv sources | grep -E "client|merged" | head -1)
-            echo "jar for $v: $JAR" >> notes/jars.txt
+            JAR=$(find ~/.gradle -name "*.jar" -path "*minecraftMaven*" 2>/dev/null | grep "minecraft-merged/$v-" | grep -iv sources | head -1)
+            CLIENT=$(find ~/.gradle -name "minecraft-client.jar" -path "*/$v/*" | head -1)
+            echo "$v: $JAR | $CLIENT" >> notes/jars.txt
             [ -z "$JAR" ] && continue
             : > notes/$v.txt
-            # сигнатуры
             for c in \
+              net.minecraft.network.chat.Style \
+              net.minecraft.network.chat.FontDescription \
+              'net.minecraft.network.chat.FontDescription$Resource' \
+              net.minecraft.network.chat.Component \
+              net.minecraft.network.chat.MutableComponent \
+              net.minecraft.client.Screenshot \
+              net.minecraft.client.gui.components.PlayerFaceRenderer \
+              com.mojang.blaze3d.platform.Window \
+              net.minecraft.client.gui.Gui \
+              net.minecraft.client.gui.ActiveTextCollector \
+              net.minecraft.client.gui.components.SpriteIconButton \
+              'net.minecraft.client.gui.components.SpriteIconButton$Builder' \
+              net.minecraft.client.gui.components.AbstractWidget \
+              net.minecraft.client.gui.components.AbstractButton \
+              net.minecraft.client.gui.components.EditBox \
+              net.minecraft.client.gui.components.AbstractSelectionList \
+              net.minecraft.client.gui.components.ObjectSelectionList \
+              net.minecraft.client.gui.components.ContainerObjectSelectionList \
+              net.minecraft.client.gui.screens.LoadingOverlay \
               net.minecraft.client.gui.screens.Screen \
               net.minecraft.client.gui.GuiGraphics \
+              net.minecraft.client.Minecraft \
+              net.minecraft.client.Options \
+              net.minecraft.client.renderer.GameRenderer \
+              net.minecraft.client.renderer.RenderPipelines \
+              net.minecraft.client.renderer.texture.TextureManager \
+              net.minecraft.client.resources.SkinManager \
+              net.minecraft.world.entity.player.PlayerSkin \
+              net.minecraft.core.ClientAsset \
+              'net.minecraft.core.ClientAsset$Texture' \
+              net.minecraft.client.gui.screens.options.OptionsScreen \
+              net.minecraft.client.gui.screens.OptionsScreen \
+              net.minecraft.client.gui.screens.options.VideoSettingsScreen \
+              net.minecraft.client.gui.screens.options.LanguageSelectScreen \
+              net.minecraft.client.gui.screens.packs.PackSelectionScreen \
+              net.minecraft.client.gui.screens.worldselection.CreateWorldScreen \
+              net.minecraft.client.gui.screens.PauseScreen \
+              net.minecraft.client.gui.components.toasts.ToastManager \
+              net.minecraft.client.gui.components.MultiLineLabel \
+              net.minecraft.client.gui.components.StringWidget \
+              net.minecraft.client.gui.layouts.HeaderAndFooterLayout \
+              net.minecraft.client.gui.screens.options.OptionsSubScreen \
+              net.minecraft.client.gui.screens.OptionsSubScreen \
+              net.minecraft.client.gui.components.OptionsList \
+              net.minecraft.client.gui.components.AbstractContainerWidget \
+              net.minecraft.util.ARGB \
+              net.minecraft.client.gui.render.TextureSetup ; do
+              echo "=== $c" >> notes/$v.txt
+              javap -p -cp "$JAR" "$c" >> notes/$v.txt 2>&1 || true
+            done
+            : > notes/$v-code.txt
+            for c in \
+              net.minecraft.client.gui.screens.Screen \
               net.minecraft.client.gui.components.AbstractWidget \
               net.minecraft.client.gui.components.AbstractButton \
               net.minecraft.client.gui.components.Button \
-              net.minecraft.client.gui.components.CycleButton \
-              net.minecraft.client.gui.components.AbstractSliderButton \
               net.minecraft.client.gui.components.EditBox \
               net.minecraft.client.gui.components.Checkbox \
               net.minecraft.client.gui.components.AbstractSelectionList \
               net.minecraft.client.gui.components.AbstractScrollArea \
-              net.minecraft.client.gui.components.ImageButton \
-              net.minecraft.client.gui.components.WidgetSprites \
               net.minecraft.client.gui.components.tabs.TabButton \
               net.minecraft.client.gui.components.tabs.TabNavigationBar \
-              net.minecraft.client.renderer.PanoramaRenderer \
-              net.minecraft.client.renderer.CubeMap \
               net.minecraft.client.gui.screens.LoadingOverlay \
-              net.minecraft.client.gui.screens.TitleScreen \
               net.minecraft.client.gui.screens.PauseScreen \
-              com.mojang.blaze3d.platform.NativeImage \
-              net.minecraft.client.renderer.texture.DynamicTexture \
-              net.minecraft.client.renderer.texture.TextureManager \
-              net.minecraft.client.renderer.RenderPipelines \
-              net.minecraft.resources.ResourceLocation \
-              net.minecraft.resources.Identifier \
-              net.minecraft.client.gui.components.Tooltip \
-              net.minecraft.client.gui.Font ; do
-              echo "=== $c" >> notes/$v.txt
-              javap -p -cp "$JAR" "$c" >> notes/$v.txt 2>&1 || true
-            done
-            # байткод методов отрисовки — чтобы видеть, что именно рисует игра
-            : > notes/$v-code.txt
-            for c in \
-              net.minecraft.client.gui.components.AbstractButton \
-              net.minecraft.client.gui.components.Button \
-              net.minecraft.client.gui.components.AbstractSliderButton \
-              net.minecraft.client.gui.components.Checkbox \
-              net.minecraft.client.gui.components.AbstractSelectionList \
-              net.minecraft.client.gui.components.AbstractScrollArea \
-              net.minecraft.client.gui.components.tabs.TabButton \
-              net.minecraft.client.gui.components.tabs.TabNavigationBar \
-              net.minecraft.client.gui.screens.Screen ; do
+              net.minecraft.client.gui.layouts.HeaderAndFooterLayout \
+              net.minecraft.client.gui.screens.options.OptionsSubScreen \
+              net.minecraft.client.gui.GuiGraphics ; do
               echo "=== $c" >> notes/$v-code.txt
-              javap -p -c -cp "$JAR" "$c" 2>&1 | grep -E "^  [a-z].*\(|invoke|getstatic|putfield|getfield|ldc" | grep -vE "Narrat|narrat" >> notes/$v-code.txt || true
+              javap -p -c -cp "$JAR" "$c" 2>&1 | grep -E "^  [a-z].*\(|invoke|getstatic|putstatic|putfield|getfield|ldc|sipush|bipush|iconst" | grep -vE "Narrat|narrat" >> notes/$v-code.txt || true
             done
-            javap -p -c -cp "$JAR" net.minecraft.client.gui.components.EditBox 2>&1 | awk '/renderWidget/,/^$/' >> notes/$v-code.txt || true
-            done
+            # текстуры интерфейса игры: имена, размеры, nine-slice
+            [ -n "$CLIENT" ] && python3 - "$CLIENT" > notes/$v-assets.txt <<'PY'
+          import sys, zipfile, struct
+          z = zipfile.ZipFile(sys.argv[1])
+          for n in sorted(z.namelist()):
+              if not n.startswith('assets/minecraft/textures/gui/') and not n.startswith('assets/minecraft/font/'):
+                  continue
+              if n.endswith('.png'):
+                  b = z.read(n)
+                  w, h = struct.unpack('>II', b[16:24])
+                  print(f'{n} {w}x{h}')
+              elif n.endswith('.mcmeta') or n.endswith('.json'):
+                  print(f'{n} :: ' + z.read(n).decode('utf8', 'replace').replace('\n', ' ')[:400])
+          PY
           done
           ls -la notes
+
+      - name: Виртуальный экран
+        if: always()
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri libglx-mesa0 mesa-utils libxrandr2 libxinerama1 libxcursor1 libxi6 libxxf86vm1 > /dev/null
+          Xvfb :99 -screen 0 1920x1080x24 > /dev/null 2>&1 &
+          sleep 2
+          DISPLAY=:99 glxinfo -B | head -20 > notes/glxinfo.txt || true
+
+      - name: Тур по экранам
+        if: always()
+        working-directory: client
+        env:
+          DISPLAY: ':99'
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          GALLIUM_DRIVER: llvmpipe
+        run: |
+          mkdir -p ../notes/shots
+          for p in mc12111 mc1201; do
+            rm -rf $p/run/screenshots
+            timeout 900 gradle :$p:runClient --no-daemon $GRADLE_ARGS -Ptour=1 > ../notes/run-$p.log 2>&1 || echo "$p exit $?" >> ../notes/run-status.txt
+            mkdir -p ../notes/shots/$p
+            cp $p/run/screenshots/neon_*.png ../notes/shots/$p/ 2>/dev/null || true
+            grep -E "NeonTour|NeonClient|ERROR|Exception|Caused by|Mixin" ../notes/run-$p.log | head -150 > ../notes/run-$p-short.log || true
+          done
+          ls -laR ../notes/shots
 
       - name: Выложить заметки в ветку ci-notes
         if: always()
         run: |
-          cp client/build.log notes/build.log 2>/dev/null || true
           cd notes
           git init -q -b ci-notes
           git config user.name "neon-ci"
           git config user.email "ci@neon.invalid"
           git add -A
-          git commit -qm "ci notes ${{ github.run_number }}"
+          git commit -qm "lab ${{ github.run_number }} ${{ github.sha }}"
           git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" ci-notes
-
-      - name: Собранные jar
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: neonclient
-          path: client/*/build/libs/neonclient-*.jar

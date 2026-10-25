@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     # правки сайта не пересобирают лаунчер
-    paths-ignore: ['site/**', 'README.md', '.github/workflows/client.yml']
+    paths-ignore: ['site/**', 'README.md', '.github/workflows/client.yml', 'client/**']
   workflow_dispatch:
 
 permissions:
