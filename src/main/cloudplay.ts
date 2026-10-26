@@ -115,9 +115,14 @@ function autohostJar(): string | null {
   return resourceFile('neon-autohost.jar');
 }
 
-/** e4all: без проверки лицензии (для оффлайн-ников), без приветствий */
+/** e4all: без проверки лицензии (для оффлайн-ников), без приветствий, только через relay */
 async function configureE4all(p: Profile) {
-  const want: Record<string, string> = { offlineMode: 'true', offlineWarningShown: 'true', welcomeShown: 'true', hideDomainInChat: 'false', hostEnabled: 'true' };
+  const want: Record<string, string> = {
+    offlineMode: 'true', offlineWarningShown: 'true', welcomeShown: 'true', hideDomainInChat: 'false', hostEnabled: 'true',
+    // прямое P2P-соединение (Dialtone/iroh) ходит на серверы, которые из России часто недоступны:
+    // при подключении друга оно падает и рвёт весь туннель. Обычный relay e4all работает стабильно.
+    dialtoneHostEnabled: 'false', dialtonePlayerEnabled: 'false', voiceP2PEnabled: 'false',
+  };
   const cfg = path.join(paths.profileDir(p.id), 'config');
   for (const file of [path.join(cfg, 'e4all', 'e4all.toml'), path.join(cfg, 'e4all.toml')]) {
     let lines: string[] = [];
