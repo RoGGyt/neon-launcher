@@ -17,6 +17,7 @@ subprojects {
     def loaderVersion = rootProject.findProperty('loader_version') ?: '0.16.14'
     def tourMode = rootProject.findProperty('tour')
     def quickPlay = rootProject.findProperty('qp')
+    def autoHost = rootProject.findProperty('autohost')
 
     dependencies {
         minecraft "com.mojang:minecraft:${project.mc_version}"
@@ -32,7 +33,7 @@ subprojects {
                 programArgs '--width', '1920', '--height', '1080'
                 if (tourMode) vmArg "-Dneon.tour=${tourMode}"
                 if (quickPlay) programArgs '--quickPlaySingleplayer', quickPlay.toString()
-                if (rootProject.findProperty('autohost')) vmArg '-Dneon.autohost=true'
+                if (autoHost) vmArg '-Dneon.autohost=true'
             }
         }
     }
