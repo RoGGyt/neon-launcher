@@ -89,30 +89,30 @@ jobs:
                   else: break
                   i += 1
               return out
-          suffixes = set()
+          # имена файлов берём из таблиц хэшей в классах-загрузчиках e4all (Quiche и iroh Native)
+          names = set()
           for mc in ('1.20.1', '1.21.11'):
               q = 'loaders=%5B%22fabric%22%5D&game_versions=%5B%22' + mc + '%22%5D'
               vers = json.loads(get('https://api.modrinth.com/v2/project/e4all/version?' + q))
               for v in vers[:2]:
                   f = next((f for f in v['files'] if f['primary']), v['files'][0])
                   z = zipfile.ZipFile(io.BytesIO(get(f['url'])))
-                  try:
-                      s = strings(z.read('io/netty/incubator/codec/quic/Quiche.class'))
-                  except KeyError:
-                      continue
-                  suffixes |= {x for x in s if re.fullmatch(r'_\d+', x)}
-          print('suffixes', suffixes)
-          for suf in sorted(suffixes):
-              for arch in ('x86_64', 'aarch_64'):
-                  name = f'netty_quiche_windows_{arch}{suf}.dll'
-                  try:
-                      data = get('https://natives.e4mc.link/' + name)
-                  except Exception as e:
-                      print('skip', name, e); continue
-                  open(os.path.join('resources', 'e4mc', name), 'wb').write(data)
-                  print(name, len(data), hashlib.sha256(data).hexdigest())
-          ok = [f for f in os.listdir(os.path.join('resources', 'e4mc')) if 'x86_64' in f]
-          if not ok:
+                  for cls in ('io/netty/incubator/codec/quic/Quiche.class', 'link/e4mc/iroh/Native.class'):
+                      try:
+                          s = strings(z.read(cls))
+                      except KeyError:
+                          continue
+                      names |= {x for x in s if re.fullmatch(r'(netty_quiche|iroh_java)_windows_[a-z0-9_]+\.dll', x)}
+          print('natives', sorted(names))
+          for name in sorted(names):
+              try:
+                  data = get('https://natives.e4mc.link/' + name)
+              except Exception as e:
+                  print('skip', name, e); continue
+              open(os.path.join('resources', 'e4mc', name), 'wb').write(data)
+              print(name, len(data), hashlib.sha256(data).hexdigest())
+          got = os.listdir(os.path.join('resources', 'e4mc'))
+          if not any(f.startswith('netty_quiche_windows_x86_64') for f in got) or not any(f.startswith('iroh_java_windows_x86_64') for f in got):
               raise SystemExit('no e4mc natives downloaded')
           PY
           ls -la resources/e4mc

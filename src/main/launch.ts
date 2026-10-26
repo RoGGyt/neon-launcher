@@ -14,7 +14,7 @@ import { installFabric, installForge } from './loaders';
 import { elyEnsureValid, ensureAuthlibInjector } from './auth';
 import { getSettings, saveSettings, updateProfile } from './store';
 import { addServerToList } from './nbt';
-import { e4mcNativePath } from './e4mc';
+import { e4mcNativeArgs } from './e4mc';
 import { neonMenuJar, hiddenFabric, hiddenFabricApi } from './neonmenu';
 import type { Account, Profile, ProgressEvent, LogEvent } from '../shared/types';
 
@@ -328,12 +328,9 @@ export async function launchProfile(
 
   const prep = await prepare(profile, hooks);
   const authlib = account.type === 'ely' ? await ensureAuthlibInjector() : null;
-  const quic = await e4mcNativePath(profile);
-  if (quic) hooks.log(`e4all: нативная библиотека из лаунчера (${path.basename(quic)})`);
-  const args = buildCommand(profile, prep, account, authlib, {
-    ...opts,
-    extraJvm: [...(opts.extraJvm ?? []), ...(quic ? [`-Dlink.e4mc.native_path=${quic}`] : [])],
-  });
+  const natives = await e4mcNativeArgs(profile);
+  if (natives.length) hooks.log(`e4all: нативные библиотеки из лаунчера (${natives.length})`);
+  const args = buildCommand(profile, prep, account, authlib, { ...opts, extraJvm: [...(opts.extraJvm ?? []), ...natives] });
 
   // сервер из профиля появляется в «Сетевой игре»
   if (profile.serverAddress?.trim()) {

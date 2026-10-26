@@ -28,31 +28,39 @@ export function classStrings(buf: Buffer): string[] {
   return out;
 }
 
-/** Имя библиотеки, которую ждёт этот e4all, например netty_quiche_windows_x86_64_74.dll */
-export function quicheLibName(classBytes: Buffer, platform = process.platform, arch = process.arch): string | null {
-  const strings = classStrings(classBytes);
-  if (!strings.includes('netty_quiche')) return null;
-  const suffix = strings.find(s => /^_\d+$/.test(s));
-  if (!suffix) return null;
+/** Нативные библиотеки e4all: где мод их ищет и каким свойством ему подсказать готовый файл */
+export const E4MC_NATIVES = [
+  { cls: 'io/netty/incubator/codec/quic/Quiche.class', prop: 'link.e4mc.native_path', base: 'netty_quiche' },
+  { cls: 'link/e4mc/iroh/Native.class', prop: 'link.e4mc.dialtone.native_path', base: 'iroh_java' },
+];
+
+/** Имя файла для этой платформы из таблицы хэшей внутри класса, например iroh_java_windows_x86_64_b296210.dll */
+export function nativeFileName(classBytes: Buffer, base: string, platform = process.platform, arch = process.arch): string | null {
   const os = platform === 'win32' ? 'windows' : platform === 'darwin' ? 'osx' : 'linux';
   const a = arch === 'arm64' ? 'aarch_64' : arch === 'x64' ? 'x86_64' : null;
   if (!a) return null;
-  const base = `netty_quiche_${os}_${a}${suffix}`;
-  return platform === 'win32' ? `${base}.dll` : platform === 'darwin' ? `lib${base}.dylib` : `lib${base}.so`;
+  const ext = platform === 'win32' ? 'dll' : platform === 'darwin' ? 'dylib' : 'so';
+  const re = new RegExp(`^(lib)?${base}_${os}_${a}_[0-9a-z]+\\.${ext}$`);
+  return classStrings(classBytes).find(s => re.test(s)) ?? null;
 }
 
-/** Путь к нативной библиотеке QUIC для e4all из профиля, если она есть в лаунчере */
-export async function e4mcNativePath(p: Profile): Promise<string | null> {
+/** JVM-аргументы с путями к нативкам e4all, которые лаунчер везёт с собой */
+export async function e4mcNativeArgs(p: Profile): Promise<string[]> {
+  const out: string[] = [];
   try {
     const mods = path.join(paths.profileDir(p.id), 'mods');
     const jar = (await fsp.readdir(mods)).find(f => /e4all|e4mc/i.test(f) && f.endsWith('.jar'));
-    if (!jar) return null;
+    if (!jar) return out;
     const zip = await ZipFile.open(path.join(mods, jar));
-    const entry = zip.entries.find(e => e.name === 'io/netty/incubator/codec/quic/Quiche.class');
-    if (!entry) return null;
-    const lib = quicheLibName(zip.read(entry));
-    return lib ? resourceFile(path.join('e4mc', lib)) : null;
+    for (const n of E4MC_NATIVES) {
+      const entry = zip.entries.find(e => e.name === n.cls);
+      if (!entry) continue;
+      const name = nativeFileName(zip.read(entry), n.base);
+      const file = name && resourceFile(path.join('e4mc', name));
+      if (file) out.push(`-D${n.prop}=${file}`);
+    }
   } catch {
-    return null;
+    /* нет модов или битый jar — e4all попробует скачать сам */
   }
+  return out;
 }
