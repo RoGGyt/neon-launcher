@@ -1,0 +1,49 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :
+Fabric Loom: 1.11.8
+Fabric Loom: 1.11.8
+
+> Task :mc1201:compileJava
+> Task :mc1201:processResources
+> Task :mc1201:classes
+> Task :mc1201:jar
+> Task :mc1201:compileTestJava NO-SOURCE
+> Task :mc1201:processIncludeJars
+> Task :mc1201:processTestResources NO-SOURCE
+> Task :mc1201:testClasses UP-TO-DATE
+> Task :mc1201:test NO-SOURCE
+> Task :mc1201:validateAccessWidener NO-SOURCE
+> Task :mc1201:check UP-TO-DATE
+> Task :mc12111:compileJava
+> Task :mc12111:processResources
+> Task :mc1201:remapJar
+> Task :mc1201:remapSourcesJar SKIPPED
+> Task :mc1201:assemble
+> Task :mc1201:build
+> Task :mc12111:classes
+> Task :mc12111:jar
+> Task :mc12111:compileTestJava NO-SOURCE
+> Task :mc12111:processIncludeJars
+> Task :mc12111:processTestResources NO-SOURCE
+> Task :mc12111:testClasses UP-TO-DATE
+> Task :mc12111:test NO-SOURCE
+> Task :mc12111:validateAccessWidener
+> Task :mc12111:check
+> Task :mc12111:remapJar
+> Task :mc12111:remapSourcesJar SKIPPED
+> Task :mc12111:assemble
+> Task :mc12111:build
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_2-1793018275856.json
+
+[Incubating] Problems report is available at: file:///home/runner/work/neon-launcher/neon-launcher/client/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 30s
+11 actionable tasks: 11 executed
