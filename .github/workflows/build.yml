@@ -66,6 +66,57 @@ jobs:
           name: neonclient
           path: resources
 
+      # нативная библиотека QUIC для e4all: с natives.e4mc.link из России часто не скачивается,
+      # поэтому кладём её в лаунчер (имя берём из самого e4all, как его ищет мод)
+      - name: Нативки e4all
+        run: |
+          mkdir -p resources/e4mc
+          python - <<'PY'
+          import io, json, re, struct, urllib.request, zipfile, hashlib, os
+          UA = {'User-Agent': 'RoGGyt/neon-launcher (build)'}
+          def get(url):
+              return urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60).read()
+          def strings(b):
+              out, n, o, i = [], struct.unpack('>H', b[8:10])[0], 10, 1
+              while i < n:
+                  t = b[o]; o += 1
+                  if t == 1:
+                      l = struct.unpack('>H', b[o:o+2])[0]; out.append(b[o+2:o+2+l].decode('utf8', 'replace')); o += 2 + l
+                  elif t in (3, 4, 9, 10, 11, 12, 17, 18): o += 4
+                  elif t in (5, 6): o += 8; i += 1
+                  elif t in (7, 8, 16, 19, 20): o += 2
+                  elif t == 15: o += 3
+                  else: break
+                  i += 1
+              return out
+          suffixes = set()
+          for mc in ('1.20.1', '1.21.11'):
+              q = 'loaders=%5B%22fabric%22%5D&game_versions=%5B%22' + mc + '%22%5D'
+              vers = json.loads(get('https://api.modrinth.com/v2/project/e4all/version?' + q))
+              for v in vers[:2]:
+                  f = next((f for f in v['files'] if f['primary']), v['files'][0])
+                  z = zipfile.ZipFile(io.BytesIO(get(f['url'])))
+                  try:
+                      s = strings(z.read('io/netty/incubator/codec/quic/Quiche.class'))
+                  except KeyError:
+                      continue
+                  suffixes |= {x for x in s if re.fullmatch(r'_\d+', x)}
+          print('suffixes', suffixes)
+          for suf in sorted(suffixes):
+              for arch in ('x86_64', 'aarch_64'):
+                  name = f'netty_quiche_windows_{arch}{suf}.dll'
+                  try:
+                      data = get('https://natives.e4mc.link/' + name)
+                  except Exception as e:
+                      print('skip', name, e); continue
+                  open(os.path.join('resources', 'e4mc', name), 'wb').write(data)
+                  print(name, len(data), hashlib.sha256(data).hexdigest())
+          ok = [f for f in os.listdir(os.path.join('resources', 'e4mc')) if 'x86_64' in f]
+          if not ok:
+              raise SystemExit('no e4mc natives downloaded')
+          PY
+          ls -la resources/e4mc
+
       - name: Установка зависимостей
         run: npm install
 

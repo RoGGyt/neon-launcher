@@ -76,7 +76,8 @@
         "to": ".",
         "filter": [
           "neon-autohost.jar",
-          "neonclient-*.jar"
+          "neonclient-*.jar",
+          "e4mc/*"
         ]
       }
     ]

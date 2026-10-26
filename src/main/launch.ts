@@ -14,6 +14,7 @@ import { installFabric, installForge } from './loaders';
 import { elyEnsureValid, ensureAuthlibInjector } from './auth';
 import { getSettings, saveSettings, updateProfile } from './store';
 import { addServerToList } from './nbt';
+import { e4mcNativePath } from './e4mc';
 import { neonMenuJar, hiddenFabric, hiddenFabricApi } from './neonmenu';
 import type { Account, Profile, ProgressEvent, LogEvent } from '../shared/types';
 
@@ -251,6 +252,9 @@ export function buildCommand(profile: Profile, prep: Prepared, account: Account,
     quick_play_multiplayer: join ? `${join.host}:${join.port}` : '',
     quick_play_singleplayer: opts.quickPlaySingleplayer ?? '',
   };
+  // в новых версиях (1.21.x) Mojang пишет переменные быстрого входа в camelCase
+  vars.quickPlayMultiplayer = vars.quick_play_multiplayer;
+  vars.quickPlaySingleplayer = vars.quick_play_singleplayer;
 
   const jvm: string[] = [
     `-Xmx${profile.ramMb}m`,
@@ -324,7 +328,12 @@ export async function launchProfile(
 
   const prep = await prepare(profile, hooks);
   const authlib = account.type === 'ely' ? await ensureAuthlibInjector() : null;
-  const args = buildCommand(profile, prep, account, authlib, opts);
+  const quic = await e4mcNativePath(profile);
+  if (quic) hooks.log(`e4all: нативная библиотека из лаунчера (${path.basename(quic)})`);
+  const args = buildCommand(profile, prep, account, authlib, {
+    ...opts,
+    extraJvm: [...(opts.extraJvm ?? []), ...(quic ? [`-Dlink.e4mc.native_path=${quic}`] : [])],
+  });
 
   // сервер из профиля появляется в «Сетевой игре»
   if (profile.serverAddress?.trim()) {
