@@ -81,12 +81,29 @@ function cacheFile(p: Profile) {
   return path.join(paths.profileDir(p.id), '.neon-cloud-cache.json');
 }
 
-/** Моды, без которых облачный мир не работает: Fabric API, e4all и наш помощник */
+/** Моды-оптимизаторы для облачного мира: логика мира, память, генерация чанков */
+const OPTIMIZERS: [string, RegExp, string][] = [
+  ['lithium', /lithium/i, 'Lithium'],
+  ['ferrite-core', /ferrite/i, 'FerriteCore'],
+  ['c2me-fabric', /c2me|concurrent chunk/i, 'C2ME'],
+];
+
+/** Моды, без которых облачный мир не работает: Fabric API, e4all и наш помощник (+ оптимизаторы) */
 async function ensureHelpers(p: Profile, log: (s: string) => void) {
   const mods = await listContent(p, 'mod');
   const has = (re: RegExp) => mods.some(m => m.enabled && (re.test(m.fileName) || re.test(m.title)));
   if (!has(/^fabric[- ]api/i)) { log('Ставлю Fabric API…'); await installContent(p, 'mod', 'fabric-api'); }
   if (!has(/e4all/i)) { log('Ставлю e4all…'); await installContent(p, 'mod', 'e4all'); }
+  // оптимизаторы: хост держит весь мир у себя, им особенно нужен запас
+  for (const [slug, re, title] of OPTIMIZERS) {
+    if (has(re)) continue;
+    try {
+      log(`Ставлю ${title}…`);
+      await installContent(p, 'mod', slug);
+    } catch (e) {
+      log(`${title} не поставился: ${(e as Error).message}`);
+    }
+  }
   const helper = autohostJar();
   if (!helper) throw new Error('В сборке лаунчера нет мода-помощника neon-autohost');
   const dest = path.join(paths.profileDir(p.id), 'mods', 'neon-autohost.jar');
