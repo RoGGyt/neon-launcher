@@ -48,7 +48,9 @@ public final class NeonAutoHost implements ModInitializer {
                 return null;
             };
             Object listener = Proxy.newProxyInstance(listenerType.getClassLoader(), new Class<?>[]{listenerType}, handler);
-            Method register = joinEvent.getClass().getMethod("register", Object.class);
+            // register берём у публичного класса Event: класс реализации (ArrayBackedEvent) закрыт для рефлексии
+            Class<?> eventApi = Class.forName("net.fabricmc.fabric.api.event.Event");
+            Method register = eventApi.getMethod("register", Object.class);
             register.invoke(joinEvent, listener);
             System.out.println(TAG + "armed: world will be opened to LAN after join");
         } catch (Throwable t) {

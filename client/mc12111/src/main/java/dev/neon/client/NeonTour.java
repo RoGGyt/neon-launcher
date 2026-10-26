@@ -72,8 +72,20 @@ public final class NeonTour {
         scale(0);
     }
 
+    private static final boolean QP = "qp".equals(System.getProperty("neon.tour"));
+    private static int qpTicks = 0;
+
     public static void tick(Minecraft mc) {
         if (!ON) return;
+        // проверка быстрого входа в мир: ждём и снимаем то, что на экране
+        if (QP) {
+            if (mc.getOverlay() != null) return;
+            qpTicks++;
+            if (qpTicks == 200) System.out.println("[NeonTour] qp screen=" + (mc.screen == null ? "null (in world)" : mc.screen.getClass().getName()) + " level=" + (mc.level != null));
+            if (qpTicks == 200) grab(mc, "quickplay");
+            if (qpTicks >= 240) mc.stop();
+            return;
+        }
         if (index < 0) {
             // ждём, пока игра загрузится
             if (mc.getOverlay() != null || mc.screen == null) { readyTicks = 0; return; }
