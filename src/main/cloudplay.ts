@@ -254,10 +254,16 @@ async function runHost(p: Profile, cloud: Cloud, me: { id: string; name: string 
     hooks.progress(null);
     if (lost) throw new Error('Пока мир качался, хостом стал другой игрок — нажми «Играть» ещё раз');
 
+    if (!fs.existsSync(path.join(dir, 'level.dat'))) {
+      throw new Error('Мир из облака скачался не полностью (нет level.dat) — нажми «Играть» ещё раз');
+    }
+    hooks.log(`[Облако] мир: ${dir}`);
+
     ui.status('Запускаю мир…');
     let address: string | undefined;
     const { finished } = await launchAndKeep(p, hooks, ui, {
-      quickPlaySingleplayer: c.folder,
+      // имя папки как оно лежит на диске (Windows сама убирает лишние точки/пробелы в конце)
+      quickPlaySingleplayer: path.basename(fs.realpathSync.native(dir)),
       extraJvm: ['-Dneon.autohost=true'],
       onLine: line => {
         const m = /Domain (?:re)?assigned: (\S+)/.exec(line);

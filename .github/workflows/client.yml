@@ -213,10 +213,13 @@ jobs:
           # быстрый вход в мир с пробелом в имени папки (как у облачного мира)
           p=mc12111
           mkdir -p "$p/run/saves/New World"
+          : > "$p/run/saves/New World/level.dat"
+          sed -i 's/^onboardAccessibility:.*/onboardAccessibility:false/' $p/run/options.txt 2>/dev/null || true
+          grep -q onboardAccessibility $p/run/options.txt 2>/dev/null || echo "onboardAccessibility:false" >> $p/run/options.txt
           cp ../resources/neon-autohost.jar $p/run/mods/ || true
-          timeout 600 gradle :$p:runClient --no-daemon $GRADLE_ARGS -Ptour=qp -Pautohost=1 "-Pqp=New World" > ../notes/run-qp.log 2>&1 || echo "qp exit $?" >> ../notes/run-status.txt
+          timeout 600 gradle :$p:runClient --no-daemon $GRADLE_ARGS -Ptour=qp -Pautohost=1 "-Pqp=New Wor?d" > ../notes/run-qp.log 2>&1 || echo "qp exit $?" >> ../notes/run-status.txt
           cp $p/run/screenshots/neon_quickplay.png ../notes/shots/ 2>/dev/null || true
-          grep -E "NeonTour|NeonAutoHost|quickPlay|QuickPlay|world|World|ERROR|Exception|Caused by|--" ../notes/run-qp.log | head -80 > ../notes/run-qp-short.log || true
+          grep -E "NeonTour|NeonAutoHost|NeonClient|quickPlay|QuickPlay|world|World|ERROR|Exception|Caused by|--" ../notes/run-qp.log | head -80 > ../notes/run-qp-short.log || true
           ls -laR ../notes/shots
 
       - name: Выложить заметки в ветку ci-notes
